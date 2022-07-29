@@ -282,31 +282,26 @@ pub unsafe extern "C" fn p256_octet_string_to_point(
 }
 
 // Calculates scalar*P in constant time (except for the scalars 2 and n-2, for which the results take a few extra cycles to compute)
-#[no_mangle]
-unsafe extern "C" fn scalarmult_variable_base(
+unsafe fn scalarmult_variable_base(
     output_mont_x: *mut u32,
     output_mont_y: *mut u32,
-    input_mont_x: *const u32,
-    input_mont_y: *const u32,
     scalar: *const u32,
 ) {
     // uint32_t output_mont_x[8], uint32_t output_mont_y[8], const uint32_t input_mont_x[8], const uint32_t input_mont_y[8], const uint32_t scalar[8]
 
     // Based on https://eprint.iacr.org/2014/130.pdf, Algorithm 1.
 
-    let input_mont_x: &[u32] = slice::from_raw_parts(input_mont_x, 8);
-    let input_mont_y: &[u32] = slice::from_raw_parts(input_mont_y, 8);
-
     // The algorithm used requires the scalar to be odd. If even, negate the scalar modulo p to make it odd, and later negate the end result.
-    let even: u32 = ((*scalar) & 1) ^ 1;
     let mut scalar2: [u32; 8] = [0; 8];
+    let even: u32 = ((*scalar) & 1) ^ 1;
     P256_negate_mod_n_if(scalar2.as_mut_ptr(), scalar, even);
 
     // Rewrite the scalar as e[0] + 2^4*e[1] + 2^8*e[2] + ... + 2^252*e[63], where each e[i] is an odd number and -15 <= e[i] <= 15.
     let mut e: [i8; 64] = [0; 64];
+    e[0] = (scalar2[0] & 0xf) as i8;
     (1..64).for_each(|i| {
         // Extract 4 bits
-        e[i] = ((scalar2[i / 8] >> ((i % 8) * 4)) & 0xf) as i8;
+        e[i] = ((scalar2[i / 8] >> ((i % 8) * 4)) & 0xf) as u8 as i8;
         // If even, subtract 2^4 from e[i - 1] and add 1 to e[i]
         e[i - 1] -= ((e[i] & 1) ^ 1) << 4;
         e[i] |= 1;
@@ -314,9 +309,9 @@ unsafe extern "C" fn scalarmult_variable_base(
 
     // Create a table of P, 3P, 5P, ... 15P.
     let mut table: [[[u32; 8]; 3]; 8] = [[[0; 8]; 3]; 8];
-    table[0][0].copy_from_slice(input_mont_x);
-    table[0][1].copy_from_slice(input_mont_y);
-    table[0][2].copy_from_slice(ONE_MONTGOMERY.as_slice());
+    table[0][0].copy_from_slice(slice::from_raw_parts(output_mont_x, 8));
+    table[0][1].copy_from_slice(slice::from_raw_parts(output_mont_y, 8));
+    table[0][2].copy_from_slice(&ONE_MONTGOMERY);
     P256_double_j(table[7].as_mut_ptr(), table[0].as_ptr());
     (1..8).for_each(|i| {
         table.copy_within(7..8, i);
@@ -324,23 +319,22 @@ unsafe extern "C" fn scalarmult_variable_base(
     });
 
     // Calculate the result as (((((((((e[63]*G)*2^4)+e[62])*2^4)+e[61])*2^4)...)+e[1])*2^4)+e[0] = (2^252*e[63] + 2^248*e[62] + ... + e[0])*G.
+
     let mut current_point: [[u32; 8]; 3] = [[0; 8]; 3];
 
     // e[63] is never negative
-    current_point.copy_from_slice(&table[usize::try_from(e[63] >> 1).unwrap()]);
+    current_point.copy_from_slice(&table[(e[63] >> 1) as u8 as usize]);
 
-    let mut i: usize = 62;
-    loop {
-        (0..4).for_each(|_| {
-            P256_double_j(current_point.as_mut_ptr(), current_point.as_ptr());
-        });
+    (0..63).rev().for_each(|i| {
+        (0..4).for_each(|_| P256_double_j(current_point.as_mut_ptr(), current_point.as_ptr()));
 
         let mut selected_point: [[u32; 8]; 3] = [[0; 8]; 3];
-        selected_point.copy_from_slice(&table[(abs_int(e[i]) >> 1) as usize]);
+        selected_point.copy_from_slice(&table[(abs_int(e[i]) >> 1) as u8 as usize]);
+
         P256_negate_mod_p_if(
             selected_point[1].as_mut_ptr(),
             selected_point[1].as_ptr(),
-            (e[i] >> 7) as u32,
+            ((e[i] as u8) >> 7) as u32,
         );
 
         // There is (only) one odd input scalar that leads to an exception when i == 0: n-2,
@@ -354,13 +348,7 @@ unsafe extern "C" fn scalarmult_variable_base(
             false,
             false,
         );
-
-        i = match i.checked_sub(1) {
-            Some(i) => i,
-            None => break,
-        }
-    }
-
+    });
     P256_jacobian_to_affine(output_mont_x, output_mont_y, current_point.as_ptr());
 
     // If the scalar was initially even, we now negate the result to get the correct result, since -(scalar*G) = (-scalar*G).
@@ -387,13 +375,7 @@ unsafe extern "C" fn p256_scalarmult_generic_no_scalar_check(
         if !P256_point_is_on_curve(output_mont_x, output_mont_y) {
             false
         } else {
-            scalarmult_variable_base(
-                output_mont_x,
-                output_mont_y,
-                output_mont_x,
-                output_mont_y,
-                scalar,
-            );
+            scalarmult_variable_base(output_mont_x, output_mont_y, scalar);
             true
         }
     }
@@ -420,8 +402,8 @@ pub unsafe extern "C" fn p256_scalarmult_generic(
     {
         false
     } else {
-        P256_from_montgomery(result_x, result_x);
-        P256_from_montgomery(result_y, result_y);
+        P256_from_montgomery(result_x, result_x as *const u32);
+        P256_from_montgomery(result_y, result_y as *const u32);
         true
     }
 }
