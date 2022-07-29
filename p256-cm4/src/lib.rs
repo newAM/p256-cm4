@@ -454,7 +454,7 @@ pub unsafe extern "C" fn p256_ecdh_calc_shared_secret(
     ) {
         false
     } else {
-        P256_from_montgomery(result_x.as_mut_ptr(), result_x.as_mut_ptr());
+        P256_from_montgomery(result_x.as_mut_ptr(), result_x.as_ptr());
         p256_convert_endianness(shared_secret as *mut _, result_x.as_mut_ptr() as *mut _, 32);
         true
     }

@@ -2,7 +2,7 @@
 
 [![CI](https://github.com/newAM/p256-cm4/workflows/CI/badge.svg)](https://github.com/newAM/p256-cm4/actions)
 
-A re-implementation of [Emill/P256-Cortex-M4] with the C portions rewritten in rust.
+A (mostly) rust re-implementation of [Emill/P256-Cortex-M4].
 
 Rust 1.59.0 stabilized the [global_asm] macro which allows for this to be compiled without any additional tooling.  No `build.rs` script or external assembler required.
 
