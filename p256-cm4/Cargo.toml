@@ -1,0 +1,16 @@
+[package]
+name = "p256-cm4"
+description = "P256-Cortex-M4 re-written in rust"
+version = "0.1.0"
+authors = ["Alex Martens <alex@thinglab.org>"]
+edition = "2021"
+license = "MIT"
+readme = "README.md"
+categories = ["embedded", "no-std", "cryptography"]
+keywords = ["no-std", "nist", "cryptography", "signatures", "cortex-m"]
+repository = "https://github.com/newAM/p256-cm4"
+
+[package.metadata.docs.rs]
+targets = ["thumbv7em-none-eabi"]
+all-features = true
+rustdoc-args = ["--cfg", "docsrs"]
