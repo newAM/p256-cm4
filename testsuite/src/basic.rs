@@ -3,6 +3,7 @@
 
 use defmt::unwrap;
 use defmt_rtt as _; // global logger
+use hex_literal::hex;
 use nucleo_wl55jc_bsp::hal::{
     cortex_m,
     pac::{self, DWT},
@@ -339,5 +340,86 @@ mod tests {
         defmt::debug!("S_SIGN={:08X}", S_SIGN);
         defmt::assert_eq!(safe_p256_convert_endianness(r_sign), R_SIGN);
         defmt::assert_eq!(safe_p256_convert_endianness(s_sign), S_SIGN);
+    }
+
+    // TODO: clean up this test, these values are hard-coded from something that I know works
+    #[test]
+    fn ecdh() {
+        use p256_cm4::{
+            p256_convert_endianness, p256_ecdh_calc_shared_secret, p256_octet_string_to_point,
+            P256_check_range_n,
+        };
+
+        let mut shared_secret: [u8; 32] = [0; 32];
+        let public_key_bytes: [u8; 65] = hex!("04ae981c0a88d381a88e3e9999d9feb0e068c918b9b4ff5e015f8d1be714c73cf61145b96af854c98bdd737d7b85fbce82a2e4f613ee82f4864e9bd906808c26d9");
+
+        let mut public_x: [u32; 8] = [0; 8];
+        let mut public_y: [u32; 8] = [0; 8];
+
+        const PRIV_KEY_BYTES: [u8; 32] = [
+            110, 14, 138, 238, 3, 36, 199, 102, 123, 228, 243, 149, 14, 155, 38, 126, 30, 98, 62,
+            79, 177, 166, 27, 110, 153, 72, 248, 124, 20, 10, 210, 96,
+        ];
+
+        let mut key: [u32; 8] = [0; 8];
+        unsafe {
+            p256_convert_endianness(
+                key.as_mut_ptr() as *mut _,
+                PRIV_KEY_BYTES.as_ptr() as *const _,
+                32,
+            )
+        };
+
+        assert!(unsafe { P256_check_range_n(key.as_ptr()) });
+        defmt::assert_eq!(
+            key,
+            [
+                336253536, 2571696252, 2980453230, 509754959, 245048958, 2078602133, 52741990,
+                1846446830
+            ]
+        );
+
+        let is_ok: bool = unsafe {
+            p256_octet_string_to_point(
+                public_x.as_mut_ptr(),
+                public_y.as_mut_ptr(),
+                public_key_bytes.as_ptr(),
+                public_key_bytes.len() as u32,
+            )
+        };
+        defmt::assert!(is_ok);
+
+        defmt::assert_eq!(
+            public_x,
+            [
+                348601590, 1603083239, 3036634625, 1758009529, 3657347296, 2386467225, 2295562664,
+                2929204234
+            ]
+        );
+        defmt::assert_eq!(
+            public_y,
+            [
+                2156668633, 1318836486, 4001559686, 2732914195, 2247872130, 3715333499, 4166306187,
+                289782122
+            ]
+        );
+
+        let point_is_on_curve: bool = unsafe {
+            p256_ecdh_calc_shared_secret(
+                shared_secret.as_mut_ptr(),
+                key.as_ptr(),
+                public_x.as_ptr(),
+                public_y.as_ptr(),
+            )
+        };
+        defmt::assert!(point_is_on_curve);
+
+        defmt::assert_eq!(
+            shared_secret,
+            [
+                130, 67, 76, 181, 106, 118, 45, 28, 18, 174, 221, 26, 193, 186, 97, 133, 156, 81,
+                36, 219, 191, 249, 107, 208, 133, 19, 221, 61, 9, 186, 157, 167
+            ]
+        );
     }
 }

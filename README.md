@@ -6,7 +6,7 @@ A (mostly) rust re-implementation of [Emill/P256-Cortex-M4].
 
 Rust 1.59.0 stabilized the [global_asm] macro which allows for this to be compiled without any additional tooling.  No `build.rs` script or external assembler required.
 
-This is in a pre-alpha state, it requires more testing for ECDH, and it is not published to crates.io.  See [ycrypto/p256-cortex-m4] for a complete implementation.
+This is in a pre-alpha state and it is not published to crates.io.  See [ycrypto/p256-cortex-m4] for a complete implementation.
 
 ## Comparisons
 
