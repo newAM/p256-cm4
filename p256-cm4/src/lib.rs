@@ -241,6 +241,7 @@ pub unsafe extern "C" fn p256_point_to_octet_string_hybrid(
 /// NOTE: The return value MUST be checked in case the point is not guaranteed to lie on the curve (e.g. if it
 /// is received from an untrusted party).
 #[no_mangle]
+#[must_use]
 pub unsafe extern "C" fn p256_octet_string_to_point(
     x: *mut u32,
     y: *mut u32,
@@ -357,6 +358,7 @@ unsafe fn scalarmult_variable_base(
 }
 
 #[no_mangle]
+#[must_use]
 unsafe extern "C" fn p256_scalarmult_generic_no_scalar_check(
     output_mont_x: *mut u32,
     output_mont_y: *mut u32,
@@ -389,6 +391,7 @@ unsafe extern "C" fn p256_scalarmult_generic_no_scalar_check(
 /// is the order of the elliptic curve, and the input point's coordinates are each less than the order of
 /// the prime field. If validation succeeds, true is returned. Otherwise false is returned.
 #[no_mangle]
+#[must_use]
 pub unsafe extern "C" fn p256_scalarmult_generic(
     result_x: *mut u32,
     result_y: *mut u32,
@@ -418,6 +421,7 @@ pub unsafe extern "C" fn p256_scalarmult_generic(
 ///
 /// NOTE: The return value MUST be checked since the other's public key point cannot generally be trusted.
 #[no_mangle]
+#[must_use]
 pub unsafe extern "C" fn p256_ecdh_calc_shared_secret(
     shared_secret: *mut u8,
     private_key: *const u32,
@@ -455,6 +459,7 @@ pub unsafe extern "C" fn p256_ecdh_calc_shared_secret(
 ///
 /// Only use a keypair for either ECDSA or ECDH, not both, and don't use the private key for any other purposes.
 #[no_mangle]
+#[must_use]
 pub unsafe extern "C" fn p256_keygen(
     public_key_x: *mut u32,
     public_key_y: *mut u32,
@@ -557,6 +562,7 @@ unsafe extern "C" fn scalarmult_fixed_base(
 /// This function validates that the scalar lies in the accepted range 1 to n-1, where n is the order of the
 /// elliptic curve, and returns true only if this validation succeeds. Otherwise false is returned.
 #[no_mangle]
+#[must_use]
 pub unsafe extern "C" fn p256_scalarmult_base(
     result_x: *mut u32,
     result_y: *mut u32,
@@ -597,6 +603,7 @@ pub struct SignPrecomp {
 /// sophisticated hash construction such as RFC 6979, or e.g. by hashing the private key, message hash and a
 /// retry counter, using a secure hash function such as SHA-256.
 #[no_mangle]
+#[must_use]
 pub unsafe extern "C" fn p256_sign(
     r: *mut u32,
     s: *mut u32,
@@ -641,6 +648,7 @@ pub unsafe extern "C" fn p256_sign(
 /// The "result" parameter will contain the computed state, that is later to be passed to p256_sign_step2.
 /// A result state MUST NOT be reused for generating multiple signatures.
 #[no_mangle]
+#[must_use]
 pub unsafe extern "C" fn p256_sign_step1(result: &mut SignPrecomp, k: *const u32) -> bool {
     // p256_sign_step1(struct SignPrecomp *result, const uint32_t k[8])
 
@@ -691,6 +699,7 @@ fn hash_to_z(z: &mut [u8], hash: &[u8]) {
 ///
 /// When this function returns, "sign_precomp" is also zeroed out and may hence not be reused.
 #[no_mangle]
+#[must_use]
 pub unsafe extern "C" fn p256_sign_step2(
     r: *mut u32,
     s: *mut u32,
@@ -777,6 +786,7 @@ fn slide_257(r: &mut [i8; 257], a: &[u8; 32]) {
 ///
 /// Returns true if the signature is valid for the given input, otherwise false.
 #[no_mangle]
+#[must_use = "The return value indicates if the message is authentic"]
 pub unsafe extern "C" fn p256_verify(
     public_key_x: *const u32,
     public_key_y: *const u32,
