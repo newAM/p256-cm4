@@ -2,7 +2,7 @@
 
 [![CI](https://github.com/newAM/p256-cm4/workflows/CI/badge.svg)](https://github.com/newAM/p256-cm4/actions)
 [![crates.io](https://img.shields.io/crates/v/p256-cm4.svg)](https://crates.io/crates/p256-cm4)
-[![docs](https://img.shields.io/badge/docs-blue)](https://docs.rs/p256-cm4/)
+[![docs](https://docs.rs/p256-cm4/badge.svg)](https://docs.rs/p256-cm4) 
 
 A (mostly) rust re-implementation of [Emill/P256-Cortex-M4].
 
