@@ -265,6 +265,7 @@ mod tests {
     fn verify() {
         use p256_cm4::{p256_octet_string_to_point, p256_verify};
 
+        let start: u32 = DWT::cycle_count();
         let mut key: [u8; 65] = [0; 65];
         key[0] = 0x04;
         key[1..33].copy_from_slice(&into_bytes(CURVE_PT_X));
@@ -293,6 +294,10 @@ mod tests {
                 safe_p256_convert_endianness(S_SIGN).as_ptr(),
             )
         };
+        let elapsed: u32 = DWT::cycle_count().wrapping_sub(start);
+
+        defmt::info!("Approximate cycles per p256 verify: {}", elapsed);
+
         defmt::assert!(authentic);
     }
 
@@ -300,6 +305,7 @@ mod tests {
     fn sign() {
         use p256_cm4::{p256_convert_endianness, p256_sign, P256_check_range_n};
 
+        let start: u32 = DWT::cycle_count();
         let mut private_key: [u32; 8] = [0; 8];
         unsafe {
             p256_convert_endianness(
@@ -332,6 +338,9 @@ mod tests {
                 integer.as_ptr(),
             )
         };
+        let elapsed: u32 = DWT::cycle_count().wrapping_sub(start);
+
+        defmt::info!("Approximate cycles per p256 sign: {}", elapsed);
 
         defmt::assert!(is_ok, "An error occured");
         defmt::debug!("r_sign={:08X}", r_sign);
