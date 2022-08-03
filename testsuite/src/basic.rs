@@ -86,10 +86,10 @@ mod tests {
     fn check_range_n() {
         use p256_cm4::P256_check_range_n;
 
-        let valid: bool = unsafe { P256_check_range_n(ZERO.as_ptr()) };
+        let valid: bool = unsafe { P256_check_range_n(&ZERO) };
         defmt::assert!(!valid, "0 is not in range");
 
-        let valid: bool = unsafe { P256_check_range_n(ONE.as_ptr()) };
+        let valid: bool = unsafe { P256_check_range_n(&ONE) };
         defmt::assert!(valid, "1 is in range");
 
         // 2**256 - 2**224 + 2**192 - 0x4319055258e8617b0c46353d039cdaaf
@@ -97,14 +97,14 @@ mod tests {
             0xfc632551, 0xf3b9cac2, 0xa7179e84, 0xbce6faad, 0xffffffff, 0xffffffff, 0x00000000,
             0xffffffff,
         ];
-        let valid: bool = unsafe { P256_check_range_n(N.as_ptr()) };
+        let valid: bool = unsafe { P256_check_range_n(&N) };
         defmt::assert!(!valid, "N is not within range");
 
         const N_MINUS_ONE: [u32; 8] = [
             0xfc632550, 0xf3b9cac2, 0xa7179e84, 0xbce6faad, 0xffffffff, 0xffffffff, 0x00000000,
             0xffffffff,
         ];
-        let valid: bool = unsafe { P256_check_range_n(N_MINUS_ONE.as_ptr()) };
+        let valid: bool = unsafe { P256_check_range_n(&N_MINUS_ONE) };
         defmt::assert!(valid, "N - 1 is within range");
     }
 
@@ -112,10 +112,10 @@ mod tests {
     fn check_range_p() {
         use p256_cm4::P256_check_range_p;
 
-        let valid: bool = unsafe { P256_check_range_p(ZERO.as_ptr()) };
+        let valid: bool = unsafe { P256_check_range_p(&ZERO) };
         defmt::assert!(valid, "0 is in range");
 
-        let valid: bool = unsafe { P256_check_range_p(ONE.as_ptr()) };
+        let valid: bool = unsafe { P256_check_range_p(&ONE) };
         defmt::assert!(valid, "1 is in range");
 
         // 2**256 - 2**224 + 2**192 + 2**96 - 1
@@ -123,14 +123,14 @@ mod tests {
             0xffffffff, 0xffffffff, 0xffffffff, 0x00000000, 0x00000000, 0x00000000, 0x00000001,
             0xffffffff,
         ];
-        let valid: bool = unsafe { P256_check_range_p(P.as_ptr()) };
+        let valid: bool = unsafe { P256_check_range_p(&P) };
         defmt::assert!(!valid, "P is not within range");
 
         const P_MINUS_ONE: [u32; 8] = [
             0xfffffffe, 0xffffffff, 0xffffffff, 0x00000000, 0x00000000, 0x00000000, 0x00000001,
             0xffffffff,
         ];
-        let valid: bool = unsafe { P256_check_range_p(P_MINUS_ONE.as_ptr()) };
+        let valid: bool = unsafe { P256_check_range_p(&P_MINUS_ONE) };
         defmt::assert!(valid, "P - 1 is within range");
     }
 
@@ -297,7 +297,7 @@ mod tests {
             &into_bytes(PRIVATE_KEY),
         );
 
-        defmt::assert!(unsafe { P256_check_range_n(private_key.as_ptr()) });
+        defmt::assert!(unsafe { P256_check_range_n(&private_key) });
 
         let mut integer: [u32; 8] = [0; 8];
 
@@ -354,7 +354,7 @@ mod tests {
 
         convert_endianness(u32x8_to_u8x32_mut(&mut key), &PRIV_KEY_BYTES);
 
-        assert!(unsafe { P256_check_range_n(key.as_ptr()) });
+        assert!(unsafe { P256_check_range_n(&key) });
         defmt::assert_eq!(
             key,
             [
