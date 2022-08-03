@@ -51,16 +51,18 @@ fn into_bytes(i: [u32; 8]) -> [u8; 32] {
     unsafe { core::mem::transmute::<[u32; 8], [u8; 32]>(i) }
 }
 
-fn safe_p256_convert_endianness(i: [u32; 8]) -> [u32; 8] {
-    let mut ret = core::mem::MaybeUninit::<[u32; 8]>::uninit();
-    unsafe {
-        p256_cm4::p256_convert_endianness(ret.as_mut_ptr() as *mut _, i.as_ptr() as *const _, 32);
-        ret.assume_init()
-    }
+fn u32x8_to_u8x32(input: &[u32; 8]) -> &[u8; 32] {
+    unsafe { core::mem::transmute::<&[u32; 8], &[u8; 32]>(input) }
+}
+
+fn u32x8_to_u8x32_mut(input: &mut [u32; 8]) -> &mut [u8; 32] {
+    unsafe { core::mem::transmute::<&mut [u32; 8], &mut [u8; 32]>(input) }
 }
 
 #[defmt_test::tests]
 mod tests {
+    use p256_cm4::p256_convert_endianness;
+
     use super::*;
 
     const ZERO: [u32; 8] = [0; 8];
@@ -142,13 +144,7 @@ mod tests {
             0x1C, 0x1D, 0x1E, 0x1F,
         ];
         let mut output: [u32; 8] = [0; 8];
-        unsafe {
-            p256_convert_endianness(
-                output.as_mut_ptr() as *mut _,
-                INPUT.as_ptr() as *const _,
-                INPUT.len() as u32,
-            )
-        };
+        p256_convert_endianness(u32x8_to_u8x32_mut(&mut output), &INPUT);
         defmt::assert_eq!(
             output,
             [
@@ -172,7 +168,7 @@ mod tests {
         use p256_cm4::p256_point_to_octet_string_uncompressed;
 
         let mut out: [u8; 65] = [0; 65];
-        unsafe { p256_point_to_octet_string_uncompressed(out.as_mut_ptr(), X.as_ptr(), Y.as_ptr()) }
+        p256_point_to_octet_string_uncompressed(&mut out, &X, &Y);
         defmt::assert_eq!(
             out,
             [
@@ -189,16 +185,14 @@ mod tests {
     fn point_to_octet_string_compressed() {
         use p256_cm4::p256_point_to_octet_string_compressed;
 
-        let mut out: [u8; 65] = [0; 65];
-        unsafe { p256_point_to_octet_string_compressed(out.as_mut_ptr(), X.as_ptr(), Y.as_ptr()) }
+        let mut out: [u8; 33] = [0; 33];
+        p256_point_to_octet_string_compressed(&mut out, &X, &Y);
         defmt::assert_eq!(
             out,
             [
                 0x03, 0xCC, 0xDD, 0xEE, 0xFF, 0x88, 0x99, 0xAA, 0xBB, 0x44, 0x55, 0x66, 0x77, 0x00,
                 0x11, 0x22, 0x33, 0xCC, 0xDD, 0xEE, 0xFF, 0x88, 0x99, 0xAA, 0xBB, 0x44, 0x55, 0x66,
-                0x77, 0x00, 0x11, 0x22, 0x33, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-                0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-                0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00
+                0x77, 0x00, 0x11, 0x22, 0x33,
             ]
         );
     }
@@ -208,7 +202,7 @@ mod tests {
         use p256_cm4::p256_point_to_octet_string_hybrid;
 
         let mut out: [u8; 65] = [0; 65];
-        unsafe { p256_point_to_octet_string_hybrid(out.as_mut_ptr(), X.as_ptr(), Y.as_ptr()) }
+        p256_point_to_octet_string_hybrid(&mut out, &X, &Y);
         defmt::assert_eq!(
             out,
             [
@@ -236,14 +230,7 @@ mod tests {
         let mut x: [u32; 8] = [0; 8];
         let mut y: [u32; 8] = [0; 8];
 
-        let is_ok: bool = unsafe {
-            p256_octet_string_to_point(
-                x.as_mut_ptr(),
-                y.as_mut_ptr(),
-                DER.as_ptr(),
-                DER.len() as u32,
-            )
-        };
+        let is_ok: bool = p256_octet_string_to_point(&mut x, &mut y, &DER);
         defmt::assert!(is_ok, "An error occured");
         defmt::assert_eq!(
             x,
@@ -274,26 +261,23 @@ mod tests {
         let mut x: [u32; 8] = [0; 8];
         let mut y: [u32; 8] = [0; 8];
 
-        let is_ok: bool = unsafe {
-            p256_octet_string_to_point(
-                x.as_mut_ptr(),
-                y.as_mut_ptr(),
-                key.as_ptr(),
-                key.len() as u32,
-            )
-        };
+        let is_ok: bool = p256_octet_string_to_point(&mut x, &mut y, &key);
         assert!(is_ok, "p256_octet_string_to_point");
 
-        let authentic: bool = unsafe {
-            p256_verify(
-                x.as_ptr(),
-                y.as_ptr(),
-                HASH.as_ptr() as *const u8,
-                32,
-                safe_p256_convert_endianness(R_SIGN).as_ptr(),
-                safe_p256_convert_endianness(S_SIGN).as_ptr(),
-            )
-        };
+        let mut r: [u32; 8] = [0; 8];
+        let mut s: [u32; 8] = [0; 8];
+
+        p256_convert_endianness(u32x8_to_u8x32_mut(&mut r), u32x8_to_u8x32(&R_SIGN));
+        p256_convert_endianness(u32x8_to_u8x32_mut(&mut s), u32x8_to_u8x32(&S_SIGN));
+
+        let authentic: bool = p256_verify(
+            &x,
+            &y,
+            unsafe { core::mem::transmute::<&[u32; 8], &[u8; 32]>(&HASH) },
+            &r,
+            &s,
+        );
+
         let elapsed: u32 = DWT::cycle_count().wrapping_sub(start);
 
         defmt::info!("Approximate cycles per p256 verify: {}", elapsed);
@@ -307,48 +291,45 @@ mod tests {
 
         let start: u32 = DWT::cycle_count();
         let mut private_key: [u32; 8] = [0; 8];
-        unsafe {
-            p256_convert_endianness(
-                private_key.as_mut_ptr() as *mut _,
-                into_bytes(PRIVATE_KEY).as_ptr() as *const _,
-                32,
-            )
-        };
+
+        p256_convert_endianness(
+            u32x8_to_u8x32_mut(&mut private_key),
+            &into_bytes(PRIVATE_KEY),
+        );
+
         defmt::assert!(unsafe { P256_check_range_n(private_key.as_ptr()) });
 
         let mut integer: [u32; 8] = [0; 8];
-        unsafe {
-            p256_convert_endianness(
-                integer.as_mut_ptr() as *mut _,
-                into_bytes(INTEGER).as_ptr() as *const _,
-                32,
-            )
-        };
+
+        p256_convert_endianness(u32x8_to_u8x32_mut(&mut integer), &into_bytes(INTEGER));
 
         let mut r_sign: [u32; 8] = [0; 8];
         let mut s_sign: [u32; 8] = [0; 8];
 
-        let is_ok: bool = unsafe {
-            p256_sign(
-                r_sign.as_mut_ptr(),
-                s_sign.as_mut_ptr(),
-                HASH.as_ptr() as *const u8,
-                32,
-                private_key.as_ptr(),
-                integer.as_ptr(),
-            )
-        };
+        let is_ok: bool = p256_sign(
+            &mut r_sign,
+            &mut s_sign,
+            unsafe { core::mem::transmute::<&[u32; 8], &[u8; 32]>(&HASH) },
+            &private_key,
+            &integer,
+        );
         let elapsed: u32 = DWT::cycle_count().wrapping_sub(start);
 
         defmt::info!("Approximate cycles per p256 sign: {}", elapsed);
 
+        let mut r: [u32; 8] = [0; 8];
+        let mut s: [u32; 8] = [0; 8];
+
+        p256_convert_endianness(u32x8_to_u8x32_mut(&mut r), u32x8_to_u8x32(&r_sign));
+        p256_convert_endianness(u32x8_to_u8x32_mut(&mut s), u32x8_to_u8x32(&s_sign));
+
         defmt::assert!(is_ok, "An error occured");
-        defmt::debug!("r_sign={:08X}", r_sign);
+        defmt::debug!("r={:08X}", r);
         defmt::debug!("R_SIGN={:08X}", R_SIGN);
-        defmt::debug!("s_sign={:08X}", r_sign);
+        defmt::debug!("s={:08X}", s);
         defmt::debug!("S_SIGN={:08X}", S_SIGN);
-        defmt::assert_eq!(safe_p256_convert_endianness(r_sign), R_SIGN);
-        defmt::assert_eq!(safe_p256_convert_endianness(s_sign), S_SIGN);
+        defmt::assert_eq!(r, R_SIGN);
+        defmt::assert_eq!(s, S_SIGN);
     }
 
     // TODO: clean up this test, these values are hard-coded from something that I know works
@@ -371,13 +352,8 @@ mod tests {
         ];
 
         let mut key: [u32; 8] = [0; 8];
-        unsafe {
-            p256_convert_endianness(
-                key.as_mut_ptr() as *mut _,
-                PRIV_KEY_BYTES.as_ptr() as *const _,
-                32,
-            )
-        };
+
+        p256_convert_endianness(u32x8_to_u8x32_mut(&mut key), &PRIV_KEY_BYTES);
 
         assert!(unsafe { P256_check_range_n(key.as_ptr()) });
         defmt::assert_eq!(
@@ -388,14 +364,8 @@ mod tests {
             ]
         );
 
-        let is_ok: bool = unsafe {
-            p256_octet_string_to_point(
-                public_x.as_mut_ptr(),
-                public_y.as_mut_ptr(),
-                public_key_bytes.as_ptr(),
-                public_key_bytes.len() as u32,
-            )
-        };
+        let is_ok: bool =
+            p256_octet_string_to_point(&mut public_x, &mut public_y, &public_key_bytes);
         defmt::assert!(is_ok);
 
         defmt::assert_eq!(
@@ -413,14 +383,8 @@ mod tests {
             ]
         );
 
-        let point_is_on_curve: bool = unsafe {
-            p256_ecdh_calc_shared_secret(
-                shared_secret.as_mut_ptr(),
-                key.as_ptr(),
-                public_x.as_ptr(),
-                public_y.as_ptr(),
-            )
-        };
+        let point_is_on_curve: bool =
+            p256_ecdh_calc_shared_secret(&mut shared_secret, &key, &public_x, &public_y);
         defmt::assert!(point_is_on_curve);
 
         defmt::assert_eq!(

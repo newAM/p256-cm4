@@ -1,9 +1,6 @@
 #![no_std]
 #![allow(clippy::missing_safety_doc)]
 
-use core::ffi::c_void;
-use core::slice;
-
 #[cfg(target_arch = "arm")]
 core::arch::global_asm!(include_str!("./asm.s"));
 
@@ -54,9 +51,7 @@ extern "C" {
     fn P256_negate_mod_p_if(out: *mut u32, inn: *const u32, should_negate: u32);
     // void P256_negate_mod_n_if(uint32_t out[8], const uint32_t in[8], uint32_t should_negate);
     fn P256_negate_mod_n_if(out: *mut u32, inn: *const u32, should_negate: u32);
-}
 
-extern "C" {
     /// Checks that the argument, as little-endian integer,
     /// is a reduced non-zero element of the scalar field.
     ///
@@ -70,6 +65,8 @@ extern "C" {
     /// In other words, that it is in the range `0..=p-1`,
     /// where `p = 2^256 - 2^224 + 2^192 + 2^96 - 1`.
     pub fn P256_check_range_p(a: *const u32) -> bool;
+
+    static P256_order: [u32; 9];
 }
 
 const ONE_MONTGOMERY: [u32; 8] = [1, 0, 0, 0xffffffff, 0xffffffff, 0xffffffff, 0xfffffffe, 0];
@@ -164,70 +161,47 @@ fn abs_int(a: i8) -> u32 {
 ///
 /// The output and input pointers may NOT refer to the same location
 /// and have no alignment requirements.
-#[no_mangle]
-pub unsafe extern "C" fn p256_convert_endianness(
-    output: *mut c_void,
-    input: *const c_void,
-    byte_len: u32,
-) {
-    let len: usize = byte_len as usize;
-    let out_slice: &mut [u8] = slice::from_raw_parts_mut(output as *mut u8, len);
-    let in_slice: &[u8] = slice::from_raw_parts(input as *const u8, len);
-    for i in 0..len / 2 {
-        let t: u8 = in_slice[len - 1 - i];
-        out_slice[len - 1 - i] = in_slice[i];
-        out_slice[i] = t;
-    }
+pub fn p256_convert_endianness(output: &mut [u8; 32], input: &[u8; 32]) {
+    (0..16).for_each(|i| {
+        let t: u8 = input[31 - i];
+        output[31 - i] = input[i];
+        output[i] = t;
+    });
+}
+
+fn u32x8_to_u8x32(input: &[u32; 8]) -> &[u8; 32] {
+    unsafe { core::mem::transmute::<&[u32; 8], &[u8; 32]>(input) }
+}
+
+fn u32x8_to_u8x32_mut(input: &mut [u32; 8]) -> &mut [u8; 32] {
+    unsafe { core::mem::transmute::<&mut [u32; 8], &mut [u8; 32]>(input) }
 }
 
 /// Uncompressed encoding
 ///
 /// `04 || Px || Py`.
-#[no_mangle]
-pub unsafe extern "C" fn p256_point_to_octet_string_uncompressed(
-    out: *mut u8,
-    x: *const u32,
-    y: *const u32,
-) {
-    // uint8_t out[65], const uint32_t x[8], const uint32_t y[8]
-    let out_slice: &mut [u8] = slice::from_raw_parts_mut(out, 65);
-    out_slice[0] = 4;
-    p256_convert_endianness(out.offset(1) as *mut _, x as *const _, 32);
-    p256_convert_endianness(out.offset(33) as *mut _, y as *const _, 32);
+pub fn p256_point_to_octet_string_uncompressed(out: &mut [u8; 65], x: &[u32; 8], y: &[u32; 8]) {
+    out[0] = 4;
+    p256_convert_endianness((&mut out[1..33]).try_into().unwrap(), u32x8_to_u8x32(x));
+    p256_convert_endianness((&mut out[33..65]).try_into().unwrap(), u32x8_to_u8x32(y));
 }
 
 /// Compressed encoding
 ///
 /// `02 || Px` if Py is even and `03 || Px` if Py is odd.
-#[no_mangle]
-pub unsafe extern "C" fn p256_point_to_octet_string_compressed(
-    out: *mut u8,
-    x: *const u32,
-    y: *const u32,
-) {
-    // uint8_t out[33], const uint32_t x[8], const uint32_t y[8]
-    let out_slice: &mut [u8] = slice::from_raw_parts_mut(out, 33);
-    let y_slice: &[u32] = slice::from_raw_parts(y, 8);
-    out_slice[0] = 2_u8.wrapping_add((y_slice[0] & 1) as u8);
-    p256_convert_endianness(out.offset(1) as *mut _, x as *const _, 32);
+pub fn p256_point_to_octet_string_compressed(out: &mut [u8; 33], x: &[u32; 8], y: &[u32; 8]) {
+    out[0] = 2_u8.wrapping_add((y[0] & 1) as u8);
+    p256_convert_endianness((&mut out[1..]).try_into().unwrap(), u32x8_to_u8x32(x))
 }
 
 /// Hybrid encoding
 ///
 /// `06 || Px || Py` if Py is even and `07 || Px || Py` if Py is odd
 /// (a pretty useless encoding).
-#[no_mangle]
-pub unsafe extern "C" fn p256_point_to_octet_string_hybrid(
-    out: *mut u8,
-    x: *const u32,
-    y: *const u32,
-) {
-    // uint8_t out[65], const uint32_t x[8], const uint32_t y[8]
-    let out_slice: &mut [u8] = slice::from_raw_parts_mut(out, 65);
-    let y_slice: &[u32] = slice::from_raw_parts(y, 8);
-    out_slice[0] = 6_u8.wrapping_add((y_slice[0] & 1) as u8);
-    p256_convert_endianness(out.offset(1) as *mut _, x as *const _, 32);
-    p256_convert_endianness(out.offset(33) as *mut _, y as *const _, 32);
+pub fn p256_point_to_octet_string_hybrid(out: &mut [u8; 65], x: &[u32; 8], y: &[u32; 8]) {
+    out[0] = 6_u8.wrapping_add((y[0] & 1) as u8);
+    p256_convert_endianness((&mut out[1..33]).try_into().unwrap(), u32x8_to_u8x32(x));
+    p256_convert_endianness((&mut out[33..65]).try_into().unwrap(), u32x8_to_u8x32(y));
 }
 
 /// Decodes a point according to the three encodings above.
@@ -240,62 +214,51 @@ pub unsafe extern "C" fn p256_point_to_octet_string_hybrid(
 ///
 /// NOTE: The return value MUST be checked in case the point is not guaranteed to lie on the curve (e.g. if it
 /// is received from an untrusted party).
-#[no_mangle]
 #[must_use]
-pub unsafe extern "C" fn p256_octet_string_to_point(
-    x: *mut u32,
-    y: *mut u32,
-    input: *const u8,
-    input_len_in_bytes: u32,
-) -> bool {
-    // uint32_t x[8], uint32_t y[8], const uint8_t* input, uint32_t input_len_in_bytes
-    if input_len_in_bytes < 33 {
-        return false;
-    }
-    p256_convert_endianness(x as *mut _, input.offset(1) as *const _, 32);
-    if !P256_check_range_p(x) {
-        return false;
-    }
-
-    let in_slice: &[u8] = slice::from_raw_parts(input, input_len_in_bytes as usize);
-
-    if (in_slice[0] == 4 || ((in_slice[0] >> 1) == 3)) && input_len_in_bytes == 65 {
-        p256_convert_endianness(y as *mut _, input.offset(33) as *const _, 32);
-        if !P256_check_range_p(y) {
+pub fn p256_octet_string_to_point(x: &mut [u32; 8], y: &mut [u32; 8], input: &[u8]) -> bool {
+    if let Ok(slice) = input[1..33].try_into() {
+        p256_convert_endianness(u32x8_to_u8x32_mut(x), slice);
+        if unsafe { !P256_check_range_p(x.as_ptr()) } {
             return false;
         }
 
-        let y_slice: &[u32] = slice::from_raw_parts(y as *const u32, 8);
-        if (in_slice[0] >> 1) == 3 && u32::from(in_slice[0] & 1) != (y_slice[0] & 1) {
-            return false;
-        }
-        let mut x_mont: [u32; 8] = [0; 8];
-        let mut y_mont: [u32; 8] = [0; 8];
+        if (input[0] == 4 || ((input[0] >> 1) == 3)) && input.len() == 65 {
+            p256_convert_endianness(u32x8_to_u8x32_mut(y), input[33..65].try_into().unwrap());
+            if unsafe { !P256_check_range_p(y.as_ptr()) } {
+                return false;
+            }
 
-        P256_to_montgomery(x_mont.as_mut_ptr(), x);
-        P256_to_montgomery(y_mont.as_mut_ptr(), y);
-        P256_point_is_on_curve(x_mont.as_ptr(), y_mont.as_ptr())
-    } else if (in_slice[0] >> 1) == 1 && input_len_in_bytes == 33 {
-        P256_decompress_point(y, x, u32::from(in_slice[0] & 1))
+            if (input[0] >> 1) == 3 && u32::from(input[0] & 1) != (y[0] & 1) {
+                return false;
+            }
+            let mut x_mont: [u32; 8] = [0; 8];
+            let mut y_mont: [u32; 8] = [0; 8];
+
+            unsafe { P256_to_montgomery(x_mont.as_mut_ptr(), x.as_ptr()) };
+            unsafe { P256_to_montgomery(y_mont.as_mut_ptr(), y.as_ptr()) };
+            unsafe { P256_point_is_on_curve(x_mont.as_ptr(), y_mont.as_ptr()) }
+        } else if (input[0] >> 1) == 1 && input.len() == 33 {
+            unsafe { P256_decompress_point(y.as_mut_ptr(), x.as_ptr(), u32::from(input[0] & 1)) }
+        } else {
+            false
+        }
     } else {
         false
     }
 }
 
 // Calculates scalar*P in constant time (except for the scalars 2 and n-2, for which the results take a few extra cycles to compute)
-unsafe fn scalarmult_variable_base(
-    output_mont_x: *mut u32,
-    output_mont_y: *mut u32,
-    scalar: *const u32,
+fn scalarmult_variable_base(
+    output_mont_x: &mut [u32; 8],
+    output_mont_y: &mut [u32; 8],
+    scalar: &[u32; 8],
 ) {
-    // uint32_t output_mont_x[8], uint32_t output_mont_y[8], const uint32_t input_mont_x[8], const uint32_t input_mont_y[8], const uint32_t scalar[8]
-
     // Based on https://eprint.iacr.org/2014/130.pdf, Algorithm 1.
 
     // The algorithm used requires the scalar to be odd. If even, negate the scalar modulo p to make it odd, and later negate the end result.
     let mut scalar2: [u32; 8] = [0; 8];
-    let even: u32 = ((*scalar) & 1) ^ 1;
-    P256_negate_mod_n_if(scalar2.as_mut_ptr(), scalar, even);
+    let even: u32 = ((scalar[0]) & 1) ^ 1;
+    unsafe { P256_negate_mod_n_if(scalar2.as_mut_ptr(), scalar.as_ptr(), even) };
 
     // Rewrite the scalar as e[0] + 2^4*e[1] + 2^8*e[2] + ... + 2^252*e[63], where each e[i] is an odd number and -15 <= e[i] <= 15.
     let mut e: [i8; 64] = [0; 64];
@@ -310,13 +273,13 @@ unsafe fn scalarmult_variable_base(
 
     // Create a table of P, 3P, 5P, ... 15P.
     let mut table: [[[u32; 8]; 3]; 8] = [[[0; 8]; 3]; 8];
-    table[0][0].copy_from_slice(slice::from_raw_parts(output_mont_x, 8));
-    table[0][1].copy_from_slice(slice::from_raw_parts(output_mont_y, 8));
+    table[0][0].copy_from_slice(output_mont_x);
+    table[0][1].copy_from_slice(output_mont_y);
     table[0][2].copy_from_slice(&ONE_MONTGOMERY);
-    P256_double_j(table[7].as_mut_ptr(), table[0].as_ptr());
+    unsafe { P256_double_j(table[7].as_mut_ptr(), table[0].as_ptr()) };
     (1..8).for_each(|i| {
         table.copy_within(7..8, i);
-        P256_add_sub_j(table[i].as_mut_ptr(), table[i - 1].as_ptr(), false, false);
+        unsafe { P256_add_sub_j(table[i].as_mut_ptr(), table[i - 1].as_ptr(), false, false) };
     });
 
     // Calculate the result as (((((((((e[63]*G)*2^4)+e[62])*2^4)+e[61])*2^4)...)+e[1])*2^4)+e[0] = (2^252*e[63] + 2^248*e[62] + ... + e[0])*G.
@@ -327,54 +290,65 @@ unsafe fn scalarmult_variable_base(
     current_point.copy_from_slice(&table[(e[63] >> 1) as u8 as usize]);
 
     (0..63).rev().for_each(|i| {
-        (0..4).for_each(|_| P256_double_j(current_point.as_mut_ptr(), current_point.as_ptr()));
+        (0..4).for_each(|_| unsafe {
+            P256_double_j(current_point.as_mut_ptr(), current_point.as_ptr())
+        });
 
         let mut selected_point: [[u32; 8]; 3] = [[0; 8]; 3];
         selected_point.copy_from_slice(&table[(abs_int(e[i]) >> 1) as u8 as usize]);
 
-        P256_negate_mod_p_if(
-            selected_point[1].as_mut_ptr(),
-            selected_point[1].as_ptr(),
-            ((e[i] as u8) >> 7) as u32,
-        );
+        unsafe {
+            P256_negate_mod_p_if(
+                selected_point[1].as_mut_ptr(),
+                selected_point[1].as_ptr(),
+                ((e[i] as u8) >> 7) as u32,
+            )
+        };
 
         // There is (only) one odd input scalar that leads to an exception when i == 0: n-2,
         // in that case current_point will be equal to selected_point and hence a doubling
         // will occur instead. We don't bother fixing the same constant time for that case since
         // the probability of that random value to be generated is around 1/2^255 and an
         // attacker could easily test this case anyway.
-        P256_add_sub_j(
-            current_point.as_mut_ptr(),
-            selected_point.as_ptr(),
-            false,
-            false,
-        );
+        unsafe {
+            P256_add_sub_j(
+                current_point.as_mut_ptr(),
+                selected_point.as_ptr(),
+                false,
+                false,
+            )
+        };
     });
-    P256_jacobian_to_affine(output_mont_x, output_mont_y, current_point.as_ptr());
+    unsafe {
+        P256_jacobian_to_affine(
+            output_mont_x.as_mut_ptr(),
+            output_mont_y.as_mut_ptr(),
+            current_point.as_ptr(),
+        )
+    };
 
     // If the scalar was initially even, we now negate the result to get the correct result, since -(scalar*G) = (-scalar*G).
     // This is done by negating y, since -(x,y) = (x,-y).
-    P256_negate_mod_p_if(output_mont_y, output_mont_y, even);
+    unsafe { P256_negate_mod_p_if(output_mont_y.as_mut_ptr(), output_mont_y.as_mut_ptr(), even) };
 }
 
-#[no_mangle]
 #[must_use]
-unsafe extern "C" fn p256_scalarmult_generic_no_scalar_check(
-    output_mont_x: *mut u32,
-    output_mont_y: *mut u32,
-    scalar: *const u32,
-    in_x: *const u32,
-    in_y: *const u32,
+fn p256_scalarmult_generic_no_scalar_check(
+    output_mont_x: &mut [u32; 8],
+    output_mont_y: &mut [u32; 8],
+    scalar: &[u32; 8],
+    in_x: &[u32; 8],
+    in_y: &[u32; 8],
 ) -> bool {
-    // uint32_t output_mont_x[8], uint32_t output_mont_y[8], const uint32_t scalar[8], const uint32_t in_x[8], const uint32_t in_y[8]
-
-    if !P256_check_range_p(in_x) || !P256_check_range_p(in_y) {
+    if unsafe { !P256_check_range_p(in_x.as_ptr()) || !P256_check_range_p(in_y.as_ptr()) } {
         false
     } else {
-        P256_to_montgomery(output_mont_x, in_x);
-        P256_to_montgomery(output_mont_y, in_y);
+        unsafe { P256_to_montgomery(output_mont_x.as_mut_ptr(), in_x.as_ptr()) };
+        unsafe { P256_to_montgomery(output_mont_y.as_mut_ptr(), in_y.as_ptr()) };
 
-        if !P256_point_is_on_curve(output_mont_x, output_mont_y) {
+        if unsafe {
+            !P256_point_is_on_curve(output_mont_x.as_mut_ptr(), output_mont_y.as_mut_ptr())
+        } {
             false
         } else {
             scalarmult_variable_base(output_mont_x, output_mont_y, scalar);
@@ -390,23 +364,22 @@ unsafe extern "C" fn p256_scalarmult_generic_no_scalar_check(
 /// This function validates all inputs and proceeds only if the scalar is within the range 1 to n-1, where n
 /// is the order of the elliptic curve, and the input point's coordinates are each less than the order of
 /// the prime field. If validation succeeds, true is returned. Otherwise false is returned.
-#[no_mangle]
 #[must_use]
-pub unsafe extern "C" fn p256_scalarmult_generic(
-    result_x: *mut u32,
-    result_y: *mut u32,
-    scalar: *const u32,
-    in_x: *const u32,
-    in_y: *const u32,
+pub fn p256_scalarmult_generic(
+    result_x: &mut [u32; 8],
+    result_y: &mut [u32; 8],
+    scalar: &[u32; 8],
+    in_x: &[u32; 8],
+    in_y: &[u32; 8],
 ) -> bool {
-    // uint32_t result_x[8], uint32_t result_y[8], const uint32_t scalar[8], const uint32_t in_x[8], const uint32_t in_y[8]
-    if !P256_check_range_n(scalar)
-        || !p256_scalarmult_generic_no_scalar_check(result_x, result_y, scalar, in_x, in_y)
-    {
+    if unsafe {
+        !P256_check_range_n(scalar.as_ptr())
+            || !p256_scalarmult_generic_no_scalar_check(result_x, result_y, scalar, in_x, in_y)
+    } {
         false
     } else {
-        P256_from_montgomery(result_x, result_x as *const u32);
-        P256_from_montgomery(result_y, result_y as *const u32);
+        unsafe { P256_from_montgomery(result_x.as_mut_ptr(), result_x.as_ptr()) };
+        unsafe { P256_from_montgomery(result_y.as_mut_ptr(), result_y.as_ptr()) };
         true
     }
 }
@@ -420,28 +393,26 @@ pub unsafe extern "C" fn p256_scalarmult_generic(
 /// Otherwise, shared secret is calculated and true is returned.
 ///
 /// NOTE: The return value MUST be checked since the other's public key point cannot generally be trusted.
-#[no_mangle]
 #[must_use]
-pub unsafe extern "C" fn p256_ecdh_calc_shared_secret(
-    shared_secret: *mut u8,
-    private_key: *const u32,
-    others_public_key_x: *const u32,
-    others_public_key_y: *const u32,
+pub fn p256_ecdh_calc_shared_secret(
+    shared_secret: &mut [u8; 32],
+    private_key: &[u32; 8],
+    others_public_key_x: &[u32; 8],
+    others_public_key_y: &[u32; 8],
 ) -> bool {
-    // uint8_t shared_secret[32], const uint32_t private_key[8], const uint32_t others_public_key_x[8], const uint32_t others_public_key_y[8]
     let mut result_x: [u32; 8] = [0; 8];
     let mut result_y: [u32; 8] = [0; 8];
     if !p256_scalarmult_generic_no_scalar_check(
-        result_x.as_mut_ptr(),
-        result_y.as_mut_ptr(),
+        &mut result_x,
+        &mut result_y,
         private_key,
         others_public_key_x,
         others_public_key_y,
     ) {
         false
     } else {
-        P256_from_montgomery(result_x.as_mut_ptr(), result_x.as_ptr());
-        p256_convert_endianness(shared_secret as *mut _, result_x.as_mut_ptr() as *mut _, 32);
+        unsafe { P256_from_montgomery(result_x.as_mut_ptr(), result_x.as_ptr()) };
+        p256_convert_endianness(shared_secret, u32x8_to_u8x32(&result_x));
         true
     }
 }
@@ -458,14 +429,12 @@ pub unsafe extern "C" fn p256_ecdh_calc_shared_secret(
 /// the curve.
 ///
 /// Only use a keypair for either ECDSA or ECDH, not both, and don't use the private key for any other purposes.
-#[no_mangle]
 #[must_use]
-pub unsafe extern "C" fn p256_keygen(
-    public_key_x: *mut u32,
-    public_key_y: *mut u32,
-    private_key: *const u32,
+pub fn p256_keygen(
+    public_key_x: &mut [u32; 8],
+    public_key_y: &mut [u32; 8],
+    private_key: &[u32; 8],
 ) -> bool {
-    // uint32_t public_key_x[8], uint32_t public_key_y[8], const uint32_t private_key[8]
     p256_scalarmult_base(public_key_x, public_key_y, private_key)
 }
 
@@ -476,18 +445,16 @@ macro_rules! get_bit {
 }
 
 // Calculates scalar*G in constant time
-#[no_mangle]
-unsafe extern "C" fn scalarmult_fixed_base(
-    output_mont_x: *mut u32,
-    output_mont_y: *mut u32,
-    scalar: *const u32,
+fn scalarmult_fixed_base(
+    output_mont_x: &mut [u32; 8],
+    output_mont_y: &mut [u32; 8],
+    scalar: &[u32; 8],
 ) {
-    // u32 output_mont_x[8], u32 output_mont_y[8], const u32 scalar[8]
     let mut scalar2: [u32; 8] = [0; 8];
 
     // Just as with the algorithm used in variable base scalar multiplication, this algorithm requires the scalar to be odd.
-    let even: u32 = ((*scalar) & 1) ^ 1;
-    P256_negate_mod_n_if(scalar2.as_mut_ptr(), scalar, even);
+    let even: u32 = ((scalar[0]) & 1) ^ 1;
+    unsafe { P256_negate_mod_n_if(scalar2.as_mut_ptr(), scalar.as_ptr(), even) };
 
     // This algorithm conceptually rewrites the odd scalar as s[0] + 2^1*s[1] + 2^2*s[2] + ... + 2^255*s[255], where each s[i] is -1 or 1.
     // By initially setting s[i] to the corresponding bit S[i] in the original odd scalar S, we go from lsb to msb, and whenever a value s[i] is 0,
@@ -510,22 +477,26 @@ unsafe extern "C" fn scalarmult_fixed_base(
                 current_point[..2].copy_from_slice(&P256_BASEPOINT_PRECOMP2[1][mask as usize]);
                 current_point[2].copy_from_slice(&ONE_MONTGOMERY);
             } else {
-                P256_double_j(current_point.as_mut_ptr(), current_point.as_ptr());
+                unsafe { P256_double_j(current_point.as_mut_ptr(), current_point.as_ptr()) };
 
                 let sign: u32 = get_bit!(scalar2, i + 3 * 64 + 32 + 1).wrapping_sub(1); // positive: 0, negative: -1
                 mask = (mask ^ sign) & 7;
                 selected_point.copy_from_slice(&P256_BASEPOINT_PRECOMP2[1][mask as usize]);
-                P256_negate_mod_p_if(
-                    selected_point[1].as_mut_ptr(),
-                    selected_point[1].as_ptr(),
-                    sign & 1,
-                );
-                P256_add_sub_j(
-                    current_point.as_mut_ptr(),
-                    selected_point.as_mut_ptr(),
-                    false,
-                    true,
-                );
+                unsafe {
+                    P256_negate_mod_p_if(
+                        selected_point[1].as_mut_ptr(),
+                        selected_point[1].as_ptr(),
+                        sign & 1,
+                    )
+                };
+                unsafe {
+                    P256_add_sub_j(
+                        current_point.as_mut_ptr(),
+                        selected_point.as_mut_ptr(),
+                        false,
+                        true,
+                    )
+                };
             }
         }
         {
@@ -535,24 +506,34 @@ unsafe extern "C" fn scalarmult_fixed_base(
             let sign: u32 = get_bit!(scalar2, i + 3 * 64 + 1).wrapping_sub(1); // positive: 0, negative: -1
             mask = (mask ^ sign) & 7;
             selected_point.copy_from_slice(&P256_BASEPOINT_PRECOMP2[0][mask as usize]);
-            P256_negate_mod_p_if(
-                selected_point[1].as_mut_ptr(),
-                selected_point[1].as_ptr(),
-                sign & 1,
-            );
-            P256_add_sub_j(
-                current_point.as_mut_ptr(),
-                selected_point.as_mut_ptr(),
-                false,
-                true,
-            );
+            unsafe {
+                P256_negate_mod_p_if(
+                    selected_point[1].as_mut_ptr(),
+                    selected_point[1].as_ptr(),
+                    sign & 1,
+                )
+            };
+            unsafe {
+                P256_add_sub_j(
+                    current_point.as_mut_ptr(),
+                    selected_point.as_mut_ptr(),
+                    false,
+                    true,
+                )
+            };
         }
     }
 
-    P256_jacobian_to_affine(output_mont_x, output_mont_y, current_point.as_ptr());
+    unsafe {
+        P256_jacobian_to_affine(
+            output_mont_x.as_mut_ptr(),
+            output_mont_y.as_mut_ptr(),
+            current_point.as_ptr(),
+        )
+    };
 
     // Negate final result if the scalar was initially even.
-    P256_negate_mod_p_if(output_mont_y, output_mont_y, even);
+    unsafe { P256_negate_mod_p_if(output_mont_y.as_mut_ptr(), output_mont_y.as_mut_ptr(), even) };
 }
 
 /// Raw scalar multiplication by the base point of the elliptic curve.
@@ -561,20 +542,18 @@ unsafe extern "C" fn scalarmult_fixed_base(
 ///
 /// This function validates that the scalar lies in the accepted range 1 to n-1, where n is the order of the
 /// elliptic curve, and returns true only if this validation succeeds. Otherwise false is returned.
-#[no_mangle]
 #[must_use]
-pub unsafe extern "C" fn p256_scalarmult_base(
-    result_x: *mut u32,
-    result_y: *mut u32,
-    scalar: *const u32,
+pub fn p256_scalarmult_base(
+    result_x: &mut [u32; 8],
+    result_y: &mut [u32; 8],
+    scalar: &[u32; 8],
 ) -> bool {
-    // u32 result_x[8], u32 result_y[8], const u32 scalar[8]
-    if !P256_check_range_n(scalar) {
+    if unsafe { !P256_check_range_n(scalar.as_ptr()) } {
         false
     } else {
         scalarmult_fixed_base(result_x, result_y, scalar);
-        P256_from_montgomery(result_x, result_x);
-        P256_from_montgomery(result_y, result_y);
+        unsafe { P256_from_montgomery(result_x.as_mut_ptr(), result_x.as_ptr()) };
+        unsafe { P256_from_montgomery(result_y.as_mut_ptr(), result_y.as_ptr()) };
         true
     }
 }
@@ -602,26 +581,21 @@ pub struct SignPrecomp {
 /// As an alternative to using a random "k", "k" might be derived deterministically from the input, using a
 /// sophisticated hash construction such as RFC 6979, or e.g. by hashing the private key, message hash and a
 /// retry counter, using a secure hash function such as SHA-256.
-#[no_mangle]
 #[must_use]
-pub unsafe extern "C" fn p256_sign(
-    r: *mut u32,
-    s: *mut u32,
-    hash: *const u8,
-    hashlen_in_bytes: u32,
-    private_key: *const u32,
-    k: *const u32,
+pub fn p256_sign(
+    r: &mut [u32; 8],
+    s: &mut [u32; 8],
+    hash: &[u8],
+    private_key: &[u32; 8],
+    k: &[u32; 8],
 ) -> bool {
-    // uint32_t r[8], uint32_t s[8], const uint8_t* hash, uint32_t hashlen_in_bytes, const uint32_t private_key[8], const uint32_t k[8]
     let mut t: SignPrecomp = Default::default();
     if !p256_sign_step1(&mut t, k) {
-        (0..8).for_each(|offset| {
-            *r.offset(offset) = 0;
-            *s.offset(offset) = 0;
-        });
+        r.fill(0);
+        s.fill(0);
         false
     } else {
-        p256_sign_step2(r, s, hash, hashlen_in_bytes, private_key, &mut t)
+        p256_sign_step2(r, s, hash, private_key, &mut t)
     }
 }
 
@@ -647,21 +621,19 @@ pub unsafe extern "C" fn p256_sign(
 ///
 /// The "result" parameter will contain the computed state, that is later to be passed to p256_sign_step2.
 /// A result state MUST NOT be reused for generating multiple signatures.
-#[no_mangle]
 #[must_use]
-pub unsafe extern "C" fn p256_sign_step1(result: &mut SignPrecomp, k: *const u32) -> bool {
-    // p256_sign_step1(struct SignPrecomp *result, const uint32_t k[8])
-
+pub fn p256_sign_step1(result: &mut SignPrecomp, k: &[u32; 8]) -> bool {
     #[allow(clippy::never_loop)]
     loop {
-        let mut point_res: [[u32; 8]; 2] = [[0; 8]; 2];
-        if !P256_check_range_n(k) {
+        if unsafe { !P256_check_range_n(k.as_ptr()) } {
             break;
         }
-        scalarmult_fixed_base(point_res[0].as_mut_ptr(), point_res[1].as_mut_ptr(), k);
-        P256_mod_n_inv(result.k_inv.as_mut_ptr(), k);
-        P256_from_montgomery(result.r.as_mut_ptr(), point_res[0].as_ptr());
-        P256_reduce_mod_n_32bytes(result.r.as_mut_ptr(), result.r.as_ptr());
+        let mut output_x: [u32; 8] = [0; 8];
+        let mut output_y: [u32; 8] = [0; 8];
+        scalarmult_fixed_base(&mut output_x, &mut output_y, k);
+        p256_mod_n_inv(&mut result.k_inv, k);
+        unsafe { P256_from_montgomery(result.r.as_mut_ptr(), output_x.as_ptr()) };
+        unsafe { P256_reduce_mod_n_32bytes(result.r.as_mut_ptr(), result.r.as_ptr()) };
 
         let r_sum: u32 = (0..8).fold(0, |r_sum, i| r_sum | result.r[i]);
         if r_sum == 0 {
@@ -698,36 +670,40 @@ fn hash_to_z(z: &mut [u8], hash: &[u8]) {
 /// and the signature is placed in "r" and "s".
 ///
 /// When this function returns, "sign_precomp" is also zeroed out and may hence not be reused.
-#[no_mangle]
 #[must_use]
-pub unsafe extern "C" fn p256_sign_step2(
-    r: *mut u32,
-    s: *mut u32,
-    hash: *const u8,
-    hashlen_in_bytes: u32,
-    private_key: *const u32,
+pub fn p256_sign_step2(
+    r: &mut [u32; 8],
+    s: &mut [u32; 8],
+    hash: &[u8],
+    private_key: &[u32; 8],
     sign_precomp: &mut SignPrecomp,
 ) -> bool {
-    // p256_sign_step2(uint32_t r[8], uint32_t s[8], const uint8_t* hash, uint32_t hashlen_in_bytes,
-    //     const uint32_t private_key[8], struct SignPrecomp *sign_precomp)
-    //     __attribute__((warn_unused_result));
     #[allow(clippy::never_loop)]
     loop {
         // just make sure user did not input an obviously invalid precomp
-        if !P256_check_range_n(sign_precomp.k_inv.as_ptr())
-            || !P256_check_range_n(sign_precomp.r.as_ptr())
-        {
+        if unsafe {
+            !P256_check_range_n(sign_precomp.k_inv.as_ptr())
+                || !P256_check_range_n(sign_precomp.r.as_ptr())
+        } {
             break;
         }
-        let z: &mut [u8] = slice::from_raw_parts_mut(r as *mut u8, hashlen_in_bytes as usize);
-        hash_to_z(z, slice::from_raw_parts(hash, hashlen_in_bytes as usize));
-        P256_mul_mod_n(s, sign_precomp.r.as_ptr(), private_key);
-        P256_add_mod_n(s, r as *const u32, s);
-        P256_mul_mod_n(s, sign_precomp.k_inv.as_ptr(), s);
+        hash_to_z(
+            unsafe { core::mem::transmute::<&mut [u32; 8], &mut [u8; 32]>(r) },
+            hash,
+        );
+        unsafe {
+            P256_mul_mod_n(
+                s.as_mut_ptr(),
+                sign_precomp.r.as_ptr(),
+                private_key.as_ptr(),
+            )
+        };
+        unsafe { P256_add_mod_n(s.as_mut_ptr(), r as *const u32, s.as_ptr()) };
+        unsafe { P256_mul_mod_n(s.as_mut_ptr(), sign_precomp.k_inv.as_ptr(), s.as_ptr()) };
 
-        r.copy_from(sign_precomp.r.as_ptr(), 8);
+        r.copy_from_slice(&sign_precomp.r);
 
-        let s_sum: u32 = (0..8).fold(0, |s_sum, i| s_sum | *s.offset(i));
+        let s_sum: u32 = s.iter().fold(0, |s_sum, s| s_sum | s);
         if s_sum == 0 {
             break;
         }
@@ -736,10 +712,8 @@ pub unsafe extern "C" fn p256_sign_step2(
         return true;
     }
 
-    (0..8).for_each(|offset| {
-        *r.offset(offset) = 0;
-        *s.offset(offset) = 0;
-    });
+    r.fill(0);
+    s.fill(0);
     false
 }
 
@@ -747,7 +721,8 @@ pub unsafe extern "C" fn p256_sign_step2(
 // so that r[0] + 2*r[1] + 2^2*r[2] + 2^3*r[3] + ... = a,
 // where each r[i] is -15, -13, ..., 11, 13, 15 or 0.
 // Only around 1/5.5 of the r[i] will be non-zero.
-fn slide_257(r: &mut [i8; 257], a: &[u8; 32]) {
+fn slide_257(a: &[u8; 32]) -> [i8; 257] {
+    let mut r: [i8; 257] = [0; 257];
     (0..256).for_each(|i| {
         r[i] = (1 & (a[i >> 3] >> (i & 7))) as i8;
     });
@@ -780,49 +755,54 @@ fn slide_257(r: &mut [i8; 257], a: &[u8; 32]) {
             }
         }
     });
+
+    r
 }
 
 /// Verifies an ECDSA signature.
 ///
 /// Returns true if the signature is valid for the given input, otherwise false.
-#[no_mangle]
 #[must_use = "The return value indicates if the message is authentic"]
-pub unsafe extern "C" fn p256_verify(
-    public_key_x: *const u32,
-    public_key_y: *const u32,
-    hash: *const u8,
-    hashlen_in_bytes: u32,
-    r: *const u32,
-    s: *const u32,
+pub fn p256_verify(
+    public_key_x: &[u32; 8],
+    public_key_y: &[u32; 8],
+    hash: &[u8],
+    r: &[u32; 8],
+    s: &[u32; 8],
 ) -> bool {
-    // const uint32_t public_key_x[8], const uint32_t public_key_y[8], const uint8_t* hash, uint32_t hashlen_in_bytes, const uint32_t r[8], const uint32_t s[8]
-    if !P256_check_range_n(r) || !P256_check_range_n(s) {
+    if unsafe { !P256_check_range_n(r.as_ptr()) || !P256_check_range_n(s.as_ptr()) } {
         return false;
     }
 
-    if !P256_check_range_p(public_key_x) || !P256_check_range_p(public_key_y) {
+    if unsafe {
+        !P256_check_range_p(public_key_x.as_ptr()) || !P256_check_range_p(public_key_y.as_ptr())
+    } {
         return false;
     }
 
     let mut pk_table: [[[u32; 8]; 3]; 8] = [[[0; 8]; 3]; 8];
-    P256_to_montgomery(pk_table[0][0].as_mut_ptr(), public_key_x);
-    P256_to_montgomery(pk_table[0][1].as_mut_ptr(), public_key_y);
+    unsafe {
+        P256_to_montgomery(pk_table[0][0].as_mut_ptr(), public_key_x.as_ptr());
+        P256_to_montgomery(pk_table[0][1].as_mut_ptr(), public_key_y.as_ptr());
+    }
     pk_table[0][2].copy_from_slice(&ONE_MONTGOMERY);
 
-    if !P256_point_is_on_curve(pk_table[0][0].as_ptr(), pk_table[0][1].as_ptr()) {
+    if unsafe { !P256_point_is_on_curve(pk_table[0][0].as_ptr(), pk_table[0][1].as_ptr()) } {
         return false;
     }
 
     // Create a table of P, 3P, 5P, ..., 15P, where P is the public key.
-    P256_double_j(pk_table[7].as_mut_ptr(), pk_table[0].as_ptr());
+    unsafe { P256_double_j(pk_table[7].as_mut_ptr(), pk_table[0].as_ptr()) };
     (1..8).for_each(|i| {
         pk_table.copy_within(7..8, i);
-        P256_add_sub_j(
-            pk_table[i].as_mut_ptr(),
-            pk_table[i - 1].as_ptr(),
-            false,
-            false,
-        );
+        unsafe {
+            P256_add_sub_j(
+                pk_table[i].as_mut_ptr(),
+                pk_table[i - 1].as_ptr(),
+                false,
+                false,
+            )
+        };
     });
 
     let mut w: [u32; 8] = [0; 8];
@@ -830,70 +810,70 @@ pub unsafe extern "C" fn p256_verify(
     let mut u2: [u32; 8] = [0; 8];
 
     let mut z: [u32; 8] = [0; 8];
-    hash_to_z(
-        core::mem::transmute::<&mut [u32; 8], &mut [u8; 32]>(&mut z),
-        slice::from_raw_parts(hash, hashlen_in_bytes as usize),
-    );
+    hash_to_z(u32x8_to_u8x32_mut(&mut z), hash);
 
-    P256_mod_n_inv(w.as_mut_ptr(), s);
+    p256_mod_n_inv(&mut w, s);
 
-    P256_mul_mod_n(u1.as_mut_ptr(), z.as_ptr(), w.as_ptr());
-    P256_mul_mod_n(u2.as_mut_ptr(), r, w.as_ptr());
+    unsafe { P256_mul_mod_n(u1.as_mut_ptr(), z.as_ptr(), w.as_ptr()) };
+    unsafe { P256_mul_mod_n(u2.as_mut_ptr(), r.as_ptr(), w.as_ptr()) };
 
     // Each value in these arrays will be an odd integer v, so that -15 <= v <= 15.
     // Around 1/5.5 of them will be non-zero.
 
-    let mut slide_bp: [i8; 257] = [0; 257];
-    let mut slide_pk: [i8; 257] = [0; 257];
-
-    slide_257(
-        &mut slide_bp,
-        core::mem::transmute::<&[u32; 8], &[u8; 32]>(&u1),
-    );
-    slide_257(
-        &mut slide_pk,
-        core::mem::transmute::<&[u32; 8], &[u8; 32]>(&u2),
-    );
+    let slide_bp: [i8; 257] = slide_257(u32x8_to_u8x32(&u1));
+    let slide_pk: [i8; 257] = slide_257(u32x8_to_u8x32(&u2));
 
     let mut cp: [[u32; 8]; 3] = [[0; 8]; 3];
 
     #[allow(clippy::comparison_chain)]
-    for i in (0..257).rev() {
-        P256_double_j(cp.as_mut_ptr(), cp.as_ptr());
+    slide_bp
+        .iter()
+        .rev()
+        .zip(slide_pk.iter().rev())
+        .for_each(|(&bp, &pk)| {
+            unsafe { P256_double_j(cp.as_mut_ptr(), cp.as_ptr()) };
 
-        if slide_bp[i] > 0 {
-            P256_add_sub_j(
-                cp.as_mut_ptr(),
-                P256_BASEPOINT_PRECOMP[(slide_bp[i] / 2) as usize].as_ptr(),
-                false,
-                true,
-            );
-        } else if slide_bp[i] < 0 {
-            P256_add_sub_j(
-                cp.as_mut_ptr(),
-                P256_BASEPOINT_PRECOMP[((-slide_bp[i]) / 2) as usize].as_ptr(),
-                true,
-                true,
-            );
-        }
-        if slide_pk[i] > 0 {
-            P256_add_sub_j(
-                cp.as_mut_ptr(),
-                pk_table[(slide_pk[i] / 2) as usize].as_ptr(),
-                false,
-                false,
-            );
-        } else if slide_pk[i] < 0 {
-            P256_add_sub_j(
-                cp.as_mut_ptr(),
-                pk_table[((-slide_pk[i]) / 2) as usize].as_ptr(),
-                true,
-                false,
-            );
-        }
-    }
+            if bp > 0 {
+                unsafe {
+                    P256_add_sub_j(
+                        cp.as_mut_ptr(),
+                        P256_BASEPOINT_PRECOMP[(bp / 2) as usize].as_ptr(),
+                        false,
+                        true,
+                    )
+                };
+            } else if bp < 0 {
+                unsafe {
+                    P256_add_sub_j(
+                        cp.as_mut_ptr(),
+                        P256_BASEPOINT_PRECOMP[((-bp) / 2) as usize].as_ptr(),
+                        true,
+                        true,
+                    )
+                };
+            }
+            if pk > 0 {
+                unsafe {
+                    P256_add_sub_j(
+                        cp.as_mut_ptr(),
+                        pk_table[(pk / 2) as usize].as_ptr(),
+                        false,
+                        false,
+                    )
+                };
+            } else if pk < 0 {
+                unsafe {
+                    P256_add_sub_j(
+                        cp.as_mut_ptr(),
+                        pk_table[((-pk) / 2) as usize].as_ptr(),
+                        true,
+                        false,
+                    )
+                };
+            }
+        });
 
-    P256_verify_last_step(r, cp.as_ptr())
+    unsafe { P256_verify_last_step(r.as_ptr(), cp.as_ptr()) }
 }
 
 #[repr(C)]
@@ -924,14 +904,7 @@ struct State {
     xy: [XYInteger; 2],
 }
 
-extern "C" {
-    static P256_order: [u32; 9];
-}
-
-#[no_mangle]
-pub unsafe extern "C" fn P256_mod_n_inv(res: *mut u32, a: *const u32) {
-    // uint32_t out[8], const uint32_t in[8]
-
+pub fn p256_mod_n_inv(res: &mut [u32; 8], a: &[u32; 8]) {
     // This function follows the algorithm in section 12.1 of https://gcd.cr.yp.to/safegcd-20190413.pdf.
     // It has been altered in the following ways:
     //   1. Due to 32-bit cpu, we use 24 * 31 iterations instead of 12 * 62.
@@ -945,9 +918,11 @@ pub unsafe extern "C" fn P256_mod_n_inv(res: *mut u32, a: *const u32) {
     let mut state: [State; 2] = Default::default();
 
     state[0].fg[0].flip_sign = 0; // non-negative f
-    state[0].fg[0].signed_value.copy_from_slice(&P256_order); // f
+    state[0].fg[0]
+        .signed_value
+        .copy_from_slice(unsafe { &P256_order }); // f
     state[0].fg[1].flip_sign = 0; // non-negative g
-    state[0].fg[1].signed_value[..8].copy_from_slice(slice::from_raw_parts(a, 8)); // g
+    state[0].fg[1].signed_value[..8].copy_from_slice(a); // g
     state[0].fg[1].signed_value[8] = 0; // upper bits of g are 0
 
     // We later need a factor 2^-744. The montgomery multiplication gives 2^(24*-32)=2^-768, so multiply the init value (1) by 2^24 here.
@@ -961,51 +936,63 @@ pub unsafe extern "C" fn P256_mod_n_inv(res: *mut u32, a: *const u32) {
         // Decode f and g into two's complement representation and use the lowest 32 bits in the P256_divsteps2_31 calculation
         let negate_f: u32 = state[i % 2].fg[0].flip_sign as u32;
         let negate_g: u32 = state[i % 2].fg[1].flip_sign as u32;
-        delta = P256_divsteps2_31(
-            delta,
-            (state[i % 2].fg[0].signed_value[0] ^ negate_f).wrapping_sub(negate_f),
-            (state[i % 2].fg[1].signed_value[0] ^ negate_g).wrapping_sub(negate_g),
-            matrix.as_mut_ptr(),
-        );
+        delta = unsafe {
+            P256_divsteps2_31(
+                delta,
+                (state[i % 2].fg[0].signed_value[0] ^ negate_f).wrapping_sub(negate_f),
+                (state[i % 2].fg[1].signed_value[0] ^ negate_g).wrapping_sub(negate_g),
+                matrix.as_mut_ptr(),
+            )
+        };
 
         // "Jump step", calculates the new f and g values that applies after 31 divstep2 iterations
-        P256_matrix_mul_fg_9(
-            matrix[0],
-            matrix[1],
-            state[i % 2].fg.as_ptr(),
-            &mut state[(i + 1) % 2].fg[0],
-        );
-        P256_matrix_mul_fg_9(
-            matrix[2],
-            matrix[3],
-            state[i % 2].fg.as_ptr(),
-            &mut state[(i + 1) % 2].fg[1],
-        );
+        unsafe {
+            P256_matrix_mul_fg_9(
+                matrix[0],
+                matrix[1],
+                state[i % 2].fg.as_ptr(),
+                &mut state[(i + 1) % 2].fg[0],
+            )
+        };
+        unsafe {
+            P256_matrix_mul_fg_9(
+                matrix[2],
+                matrix[3],
+                state[i % 2].fg.as_ptr(),
+                &mut state[(i + 1) % 2].fg[1],
+            )
+        };
 
         // Iterate the result vector
         // Due to montgomery multiplication inside this function, each step also adds a 2^-32 factor
-        P256_matrix_mul_mod_n(
-            matrix[0],
-            matrix[1],
-            state[i % 2].xy.as_ptr(),
-            &mut state[(i + 1) % 2].xy[0],
-        );
-        P256_matrix_mul_mod_n(
-            matrix[2],
-            matrix[3],
-            state[i % 2].xy.as_ptr(),
-            &mut state[(i + 1) % 2].xy[1],
-        );
+        unsafe {
+            P256_matrix_mul_mod_n(
+                matrix[0],
+                matrix[1],
+                state[i % 2].xy.as_ptr(),
+                &mut state[(i + 1) % 2].xy[0],
+            )
+        };
+        unsafe {
+            P256_matrix_mul_mod_n(
+                matrix[2],
+                matrix[3],
+                state[i % 2].xy.as_ptr(),
+                &mut state[(i + 1) % 2].xy[1],
+            )
+        };
     });
 
     // Calculates val^-1 = sgn(f) * v * 2^-744, where v is the "top-right corner" of the resulting T24*T23*...*T1 matrix.
     // In this implementation, at this point x contains v * 2^-744.
-    P256_negate_mod_n_if(
-        res,
-        &state[0].xy[0].value[0],
-        ((state[0].xy[0].flip_sign
-            ^ state[0].fg[0].flip_sign
-            ^ (state[0].fg[0].signed_value[8] as i32))
-            & 1) as u32,
-    );
+    unsafe {
+        P256_negate_mod_n_if(
+            res.as_mut_ptr(),
+            &state[0].xy[0].value[0],
+            ((state[0].xy[0].flip_sign
+                ^ state[0].fg[0].flip_sign
+                ^ (state[0].fg[0].signed_value[8] as i32))
+                & 1) as u32,
+        )
+    };
 }
