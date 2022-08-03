@@ -4,6 +4,16 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+### Changed
+- Changed all rust functions to use slices instead of pointers.
+
+### Removed
+- Removed `extern "C"` from all rust functions.
+- Removed `#[no_mangle]` from all rust functions.
+- Removed `unsafe` from all rust functions.
+- Removed the `p256_` prefix from all rust functions.
+
 ## [0.1.1] - 2022-08-01
 ### Changed
 - Added `#[cfg(target_arch = "arm")]` to the assembly to improve compatibility with IDE and CI tools.

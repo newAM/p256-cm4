@@ -161,7 +161,7 @@ fn abs_int(a: i8) -> u32 {
 ///
 /// The output and input pointers may NOT refer to the same location
 /// and have no alignment requirements.
-pub fn p256_convert_endianness(output: &mut [u8; 32], input: &[u8; 32]) {
+pub fn convert_endianness(output: &mut [u8; 32], input: &[u8; 32]) {
     (0..16).for_each(|i| {
         let t: u8 = input[31 - i];
         output[31 - i] = input[i];
@@ -180,28 +180,28 @@ fn u32x8_to_u8x32_mut(input: &mut [u32; 8]) -> &mut [u8; 32] {
 /// Uncompressed encoding
 ///
 /// `04 || Px || Py`.
-pub fn p256_point_to_octet_string_uncompressed(out: &mut [u8; 65], x: &[u32; 8], y: &[u32; 8]) {
+pub fn point_to_octet_string_uncompressed(out: &mut [u8; 65], x: &[u32; 8], y: &[u32; 8]) {
     out[0] = 4;
-    p256_convert_endianness((&mut out[1..33]).try_into().unwrap(), u32x8_to_u8x32(x));
-    p256_convert_endianness((&mut out[33..65]).try_into().unwrap(), u32x8_to_u8x32(y));
+    convert_endianness((&mut out[1..33]).try_into().unwrap(), u32x8_to_u8x32(x));
+    convert_endianness((&mut out[33..65]).try_into().unwrap(), u32x8_to_u8x32(y));
 }
 
 /// Compressed encoding
 ///
 /// `02 || Px` if Py is even and `03 || Px` if Py is odd.
-pub fn p256_point_to_octet_string_compressed(out: &mut [u8; 33], x: &[u32; 8], y: &[u32; 8]) {
+pub fn point_to_octet_string_compressed(out: &mut [u8; 33], x: &[u32; 8], y: &[u32; 8]) {
     out[0] = 2_u8.wrapping_add((y[0] & 1) as u8);
-    p256_convert_endianness((&mut out[1..]).try_into().unwrap(), u32x8_to_u8x32(x))
+    convert_endianness((&mut out[1..]).try_into().unwrap(), u32x8_to_u8x32(x))
 }
 
 /// Hybrid encoding
 ///
 /// `06 || Px || Py` if Py is even and `07 || Px || Py` if Py is odd
 /// (a pretty useless encoding).
-pub fn p256_point_to_octet_string_hybrid(out: &mut [u8; 65], x: &[u32; 8], y: &[u32; 8]) {
+pub fn point_to_octet_string_hybrid(out: &mut [u8; 65], x: &[u32; 8], y: &[u32; 8]) {
     out[0] = 6_u8.wrapping_add((y[0] & 1) as u8);
-    p256_convert_endianness((&mut out[1..33]).try_into().unwrap(), u32x8_to_u8x32(x));
-    p256_convert_endianness((&mut out[33..65]).try_into().unwrap(), u32x8_to_u8x32(y));
+    convert_endianness((&mut out[1..33]).try_into().unwrap(), u32x8_to_u8x32(x));
+    convert_endianness((&mut out[33..65]).try_into().unwrap(), u32x8_to_u8x32(y));
 }
 
 /// Decodes a point according to the three encodings above.
@@ -215,15 +215,15 @@ pub fn p256_point_to_octet_string_hybrid(out: &mut [u8; 65], x: &[u32; 8], y: &[
 /// NOTE: The return value MUST be checked in case the point is not guaranteed to lie on the curve (e.g. if it
 /// is received from an untrusted party).
 #[must_use]
-pub fn p256_octet_string_to_point(x: &mut [u32; 8], y: &mut [u32; 8], input: &[u8]) -> bool {
+pub fn octet_string_to_point(x: &mut [u32; 8], y: &mut [u32; 8], input: &[u8]) -> bool {
     if let Ok(slice) = input[1..33].try_into() {
-        p256_convert_endianness(u32x8_to_u8x32_mut(x), slice);
+        convert_endianness(u32x8_to_u8x32_mut(x), slice);
         if unsafe { !P256_check_range_p(x.as_ptr()) } {
             return false;
         }
 
         if (input[0] == 4 || ((input[0] >> 1) == 3)) && input.len() == 65 {
-            p256_convert_endianness(u32x8_to_u8x32_mut(y), input[33..65].try_into().unwrap());
+            convert_endianness(u32x8_to_u8x32_mut(y), input[33..65].try_into().unwrap());
             if unsafe { !P256_check_range_p(y.as_ptr()) } {
                 return false;
             }
@@ -333,7 +333,7 @@ fn scalarmult_variable_base(
 }
 
 #[must_use]
-fn p256_scalarmult_generic_no_scalar_check(
+fn scalarmult_generic_no_scalar_check(
     output_mont_x: &mut [u32; 8],
     output_mont_y: &mut [u32; 8],
     scalar: &[u32; 8],
@@ -365,7 +365,7 @@ fn p256_scalarmult_generic_no_scalar_check(
 /// is the order of the elliptic curve, and the input point's coordinates are each less than the order of
 /// the prime field. If validation succeeds, true is returned. Otherwise false is returned.
 #[must_use]
-pub fn p256_scalarmult_generic(
+pub fn scalarmult_generic(
     result_x: &mut [u32; 8],
     result_y: &mut [u32; 8],
     scalar: &[u32; 8],
@@ -374,7 +374,7 @@ pub fn p256_scalarmult_generic(
 ) -> bool {
     if unsafe {
         !P256_check_range_n(scalar.as_ptr())
-            || !p256_scalarmult_generic_no_scalar_check(result_x, result_y, scalar, in_x, in_y)
+            || !scalarmult_generic_no_scalar_check(result_x, result_y, scalar, in_x, in_y)
     } {
         false
     } else {
@@ -394,7 +394,7 @@ pub fn p256_scalarmult_generic(
 ///
 /// NOTE: The return value MUST be checked since the other's public key point cannot generally be trusted.
 #[must_use]
-pub fn p256_ecdh_calc_shared_secret(
+pub fn ecdh_calc_shared_secret(
     shared_secret: &mut [u8; 32],
     private_key: &[u32; 8],
     others_public_key_x: &[u32; 8],
@@ -402,7 +402,7 @@ pub fn p256_ecdh_calc_shared_secret(
 ) -> bool {
     let mut result_x: [u32; 8] = [0; 8];
     let mut result_y: [u32; 8] = [0; 8];
-    if !p256_scalarmult_generic_no_scalar_check(
+    if !scalarmult_generic_no_scalar_check(
         &mut result_x,
         &mut result_y,
         private_key,
@@ -412,7 +412,7 @@ pub fn p256_ecdh_calc_shared_secret(
         false
     } else {
         unsafe { P256_from_montgomery(result_x.as_mut_ptr(), result_x.as_ptr()) };
-        p256_convert_endianness(shared_secret, u32x8_to_u8x32(&result_x));
+        convert_endianness(shared_secret, u32x8_to_u8x32(&result_x));
         true
     }
 }
@@ -430,12 +430,12 @@ pub fn p256_ecdh_calc_shared_secret(
 ///
 /// Only use a keypair for either ECDSA or ECDH, not both, and don't use the private key for any other purposes.
 #[must_use]
-pub fn p256_keygen(
+pub fn keygen(
     public_key_x: &mut [u32; 8],
     public_key_y: &mut [u32; 8],
     private_key: &[u32; 8],
 ) -> bool {
-    p256_scalarmult_base(public_key_x, public_key_y, private_key)
+    scalarmult_base(public_key_x, public_key_y, private_key)
 }
 
 macro_rules! get_bit {
@@ -543,7 +543,7 @@ fn scalarmult_fixed_base(
 /// This function validates that the scalar lies in the accepted range 1 to n-1, where n is the order of the
 /// elliptic curve, and returns true only if this validation succeeds. Otherwise false is returned.
 #[must_use]
-pub fn p256_scalarmult_base(
+pub fn scalarmult_base(
     result_x: &mut [u32; 8],
     result_y: &mut [u32; 8],
     scalar: &[u32; 8],
@@ -582,7 +582,7 @@ pub struct SignPrecomp {
 /// sophisticated hash construction such as RFC 6979, or e.g. by hashing the private key, message hash and a
 /// retry counter, using a secure hash function such as SHA-256.
 #[must_use]
-pub fn p256_sign(
+pub fn sign(
     r: &mut [u32; 8],
     s: &mut [u32; 8],
     hash: &[u8],
@@ -590,12 +590,12 @@ pub fn p256_sign(
     k: &[u32; 8],
 ) -> bool {
     let mut t: SignPrecomp = Default::default();
-    if !p256_sign_step1(&mut t, k) {
+    if !sign_step1(&mut t, k) {
         r.fill(0);
         s.fill(0);
         false
     } else {
-        p256_sign_step2(r, s, hash, private_key, &mut t)
+        sign_step2(r, s, hash, private_key, &mut t)
     }
 }
 
@@ -622,7 +622,7 @@ pub fn p256_sign(
 /// The "result" parameter will contain the computed state, that is later to be passed to p256_sign_step2.
 /// A result state MUST NOT be reused for generating multiple signatures.
 #[must_use]
-pub fn p256_sign_step1(result: &mut SignPrecomp, k: &[u32; 8]) -> bool {
+pub fn sign_step1(result: &mut SignPrecomp, k: &[u32; 8]) -> bool {
     #[allow(clippy::never_loop)]
     loop {
         if unsafe { !P256_check_range_n(k.as_ptr()) } {
@@ -631,7 +631,7 @@ pub fn p256_sign_step1(result: &mut SignPrecomp, k: &[u32; 8]) -> bool {
         let mut output_x: [u32; 8] = [0; 8];
         let mut output_y: [u32; 8] = [0; 8];
         scalarmult_fixed_base(&mut output_x, &mut output_y, k);
-        p256_mod_n_inv(&mut result.k_inv, k);
+        mod_n_inv(&mut result.k_inv, k);
         unsafe { P256_from_montgomery(result.r.as_mut_ptr(), output_x.as_ptr()) };
         unsafe { P256_reduce_mod_n_32bytes(result.r.as_mut_ptr(), result.r.as_ptr()) };
 
@@ -671,7 +671,7 @@ fn hash_to_z(z: &mut [u8], hash: &[u8]) {
 ///
 /// When this function returns, "sign_precomp" is also zeroed out and may hence not be reused.
 #[must_use]
-pub fn p256_sign_step2(
+pub fn sign_step2(
     r: &mut [u32; 8],
     s: &mut [u32; 8],
     hash: &[u8],
@@ -760,7 +760,7 @@ fn slide_257(a: &[u8; 32]) -> [i8; 257] {
 ///
 /// Returns true if the signature is valid for the given input, otherwise false.
 #[must_use = "The return value indicates if the message is authentic"]
-pub fn p256_verify(
+pub fn verify(
     public_key_x: &[u32; 8],
     public_key_y: &[u32; 8],
     hash: &[u8],
@@ -809,7 +809,7 @@ pub fn p256_verify(
     let mut z: [u32; 8] = [0; 8];
     hash_to_z(u32x8_to_u8x32_mut(&mut z), hash);
 
-    p256_mod_n_inv(&mut w, s);
+    mod_n_inv(&mut w, s);
 
     unsafe { P256_mul_mod_n(u1.as_mut_ptr(), z.as_ptr(), w.as_ptr()) };
     unsafe { P256_mul_mod_n(u2.as_mut_ptr(), r.as_ptr(), w.as_ptr()) };
@@ -901,7 +901,7 @@ struct State {
     xy: [XYInteger; 2],
 }
 
-pub fn p256_mod_n_inv(res: &mut [u32; 8], a: &[u32; 8]) {
+fn mod_n_inv(res: &mut [u32; 8], a: &[u32; 8]) {
     // This function follows the algorithm in section 12.1 of https://gcd.cr.yp.to/safegcd-20190413.pdf.
     // It has been altered in the following ways:
     //   1. Due to 32-bit cpu, we use 24 * 31 iterations instead of 12 * 62.
