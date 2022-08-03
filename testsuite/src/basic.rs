@@ -61,8 +61,6 @@ fn u32x8_to_u8x32_mut(input: &mut [u32; 8]) -> &mut [u8; 32] {
 
 #[defmt_test::tests]
 mod tests {
-    use p256_cm4::convert_endianness;
-
     use super::*;
 
     const ZERO: [u32; 8] = [0; 8];
@@ -250,7 +248,7 @@ mod tests {
 
     #[test]
     fn test_verify() {
-        use p256_cm4::{octet_string_to_point, verify};
+        use p256_cm4::{convert_endianness, octet_string_to_point, verify};
 
         let start: u32 = DWT::cycle_count();
         let mut key: [u8; 65] = [0; 65];
