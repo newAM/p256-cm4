@@ -687,10 +687,7 @@ pub fn p256_sign_step2(
         } {
             break;
         }
-        hash_to_z(
-            unsafe { core::mem::transmute::<&mut [u32; 8], &mut [u8; 32]>(r) },
-            hash,
-        );
+        hash_to_z(u32x8_to_u8x32_mut(r), hash);
         unsafe {
             P256_mul_mod_n(
                 s.as_mut_ptr(),
