@@ -10,7 +10,7 @@ Rust 1.59.0 stabilized the [global_asm] macro which allows for this to be compil
 
 ## Limitations
 
-This is not yet complete, it lacks safe wrappers for the `unsafe` functions.  See [ycrypto/p256-cortex-m4] for a safe implementation.
+This is not yet complete, it lacks interoperability with other targets (via RustCrypto traits or compile-time switches).  See [ycrypto/p256-cortex-m4] for an interoperable solution.
 
 This lacks the configurability of the original source because rust features are less powerful than C pre-processor macros.  Use [ycrypto/p256-cortex-m4-sys] if you require configurability.
 
@@ -33,7 +33,7 @@ Install [probe-run].
 Adjust `.cargo/config.toml`, `memory.x`, `testsuite/Cargo.toml`, and the clock setup for your target.
 
 ```bash
-cargo test -p testsuite
+DEFMT_LOG=trace cargo test -p testsuite
 ```
 
 ### ASM Generation
