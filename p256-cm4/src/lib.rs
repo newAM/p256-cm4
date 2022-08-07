@@ -52,19 +52,8 @@ extern "C" {
     // void P256_negate_mod_n_if(uint32_t out[8], const uint32_t in[8], uint32_t should_negate);
     fn P256_negate_mod_n_if(out: *mut u32, inn: *const u32, should_negate: u32);
 
-    /// Checks that the argument, as little-endian integer,
-    /// is a reduced non-zero element of the scalar field.
-    ///
-    /// In other words, that it is in the range `1..=n-1`,
-    /// where `n = 2^256 - 2^224 + 2^192 - 0x4319055258e8617b0c46353d039cdaaf`.
-    pub fn P256_check_range_n(a: &[u32; 8]) -> bool;
-
-    /// Checks that the argument, as little-endian integer,
-    /// is a reduced element of the base field.
-    ///
-    /// In other words, that it is in the range `0..=p-1`,
-    /// where `p = 2^256 - 2^224 + 2^192 + 2^96 - 1`.
-    pub fn P256_check_range_p(a: &[u32; 8]) -> bool;
+    fn P256_check_range_n(a: &[u32; 8]) -> bool;
+    fn P256_check_range_p(a: &[u32; 8]) -> bool;
 
     static P256_order: [u32; 9];
 }
@@ -155,6 +144,28 @@ fn abs_int(a: i8) -> u32 {
     let mut result: u32 = ((-a) as u32) & mask;
     result |= (a as u32) & (mask ^ 0xF);
     result
+}
+
+/// Checks that the argument, as little-endian integer,
+/// is a reduced non-zero element of the scalar field.
+///
+/// In other words, that it is in the range `1..=n-1`,
+/// where `n = 2^256 - 2^224 + 2^192 - 0x4319055258e8617b0c46353d039cdaaf`.
+#[inline]
+#[must_use]
+pub fn check_range_n(a: &[u32; 8]) -> bool {
+    unsafe { P256_check_range_n(a) }
+}
+
+/// Checks that the argument, as little-endian integer,
+/// is a reduced element of the base field.
+///
+/// In other words, that it is in the range `0..=p-1`,
+/// where `p = 2^256 - 2^224 + 2^192 + 2^96 - 1`.
+#[inline]
+#[must_use]
+pub fn check_range_p(a: &[u32; 8]) -> bool {
+    unsafe { P256_check_range_p(a) }
 }
 
 /// Converts endianness by reversing the input value.
