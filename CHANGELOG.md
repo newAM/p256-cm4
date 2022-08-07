@@ -4,6 +4,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+### Changed
+- Added safe wrapper functions for `P256_check_range_p` and `P256_check_range_p`.
+  - Removed `P256_` prefix.
+  - Removed `unsafe` requirement because these are no longer `extern "C"`.
+  - Added `#[must_use]`.
+
 ## [0.2.0] - 2022-08-06
 ### Changed
 - Changed all rust functions to use slices instead of pointers.
