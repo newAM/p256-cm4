@@ -6,7 +6,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 ### Changed
-- Added safe wrapper functions for `P256_check_range_p` and `P256_check_range_p`.
+- Added safe wrapper functions for `P256_check_range_p` and `P256_check_range_n`.
   - Removed `P256_` prefix.
   - Removed `unsafe` requirement because these are no longer `extern "C"`.
   - Added `#[must_use]`.
