@@ -13,7 +13,7 @@ harness = false
 
 [dependencies]
 defmt = "0.3"
-defmt-rtt = "0.4"
+defmt-rtt = "1.0"
 defmt-test = "0.3"
 hex-literal = "1.0.0"
 nucleo-wl55jc-bsp = { version = "0.6", features = ["stm32wl5x_cm4", "defmt", "rt"] }
