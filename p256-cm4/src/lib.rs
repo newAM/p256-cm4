@@ -4,7 +4,7 @@
 #[cfg(target_arch = "arm")]
 core::arch::global_asm!(include_str!("./asm.s"));
 
-extern "C" {
+unsafe extern "C" {
     // int P256_divsteps2_31(int delta, uint32_t f, uint32_t g, uint32_t res_matrix[4]);
     fn P256_divsteps2_31(delta: i32, f: u32, g: u32, res_matrix: *mut u32) -> i32;
     // void P256_matrix_mul_fg_9(uint32_t a, uint32_t b, const struct FGInteger fg[2], struct FGInteger *res);
@@ -810,16 +810,15 @@ pub fn verify(
         };
     });
 
-    let mut w: [u32; 8] = [0; 8];
-    let mut u1: [u32; 8] = [0; 8];
-    let mut u2: [u32; 8] = [0; 8];
-
     let mut z: [u32; 8] = [0; 8];
     hash_to_z(u32x8_to_u8x32_mut(&mut z), hash);
 
+    let mut w: [u32; 8] = [0; 8];
     mod_n_inv(&mut w, s);
 
+    let mut u1: [u32; 8] = [0; 8];
     unsafe { P256_mul_mod_n(u1.as_mut_ptr(), z.as_ptr(), w.as_ptr()) };
+    let mut u2: [u32; 8] = [0; 8];
     unsafe { P256_mul_mod_n(u2.as_mut_ptr(), r.as_ptr(), w.as_ptr()) };
 
     // Each value in these arrays will be an odd integer v, so that -15 <= v <= 15.

@@ -338,7 +338,9 @@ mod tests {
         };
 
         let mut shared_secret: [u8; 32] = [0; 32];
-        let public_key_bytes: [u8; 65] = hex!("04ae981c0a88d381a88e3e9999d9feb0e068c918b9b4ff5e015f8d1be714c73cf61145b96af854c98bdd737d7b85fbce82a2e4f613ee82f4864e9bd906808c26d9");
+        let public_key_bytes: [u8; 65] = hex!(
+            "04ae981c0a88d381a88e3e9999d9feb0e068c918b9b4ff5e015f8d1be714c73cf61145b96af854c98bdd737d7b85fbce82a2e4f613ee82f4864e9bd906808c26d9"
+        );
 
         let mut public_x: [u32; 8] = [0; 8];
         let mut public_y: [u32; 8] = [0; 8];
