@@ -625,49 +625,6 @@ P256_sqrmod:
  pop {pc}
 
  .size P256_sqrmod, .-P256_sqrmod
-# 1315 "P256-Cortex-M4/p256-cortex-m4-asm-gcc.S"
- .type P256_addmod, %function
-P256_addmod:
- ldm r2,{r2-r9}
- ldm r1!,{r0,r10,r11,r12}
- adds r2,r0
- adcs r3,r3,r10
- adcs r4,r4,r11
- adcs r5,r5,r12
- ldm r1,{r0,r1,r11,r12}
- adcs r6,r6,r0
- adcs r7,r7,r1
- adcs r8,r8,r11
- adcs r9,r9,r12
- movs r10,#0
- adcs r10,r10,r10
-
- subs r2,#0xffffffff
- sbcs r3,r3,#0xffffffff
- sbcs r4,r4,#0xffffffff
- sbcs r5,r5,#0
- sbcs r6,r6,#0
- sbcs r7,r7,#0
- sbcs r8,r8,#1
- sbcs r9,r9,#0xffffffff
- sbcs r10,r10,#0
-
- adds r0,r2,r10
- adcs r1,r3,r10
- adcs r2,r4,r10
- adcs r3,r5,#0
- adcs r4,r6,#0
- adcs r5,r7,#0
- adcs r6,r8,r10, lsr #31
- adcs r7,r9,r10
-
- bx lr
-
- .size P256_addmod, .-P256_addmod
-
-
-
-
  .type P256_sqrmod_many, %function
 P256_sqrmod_many:
 
