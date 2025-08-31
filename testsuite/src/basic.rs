@@ -1,14 +1,10 @@
 #![no_std]
 #![no_main]
 
+use cortex_m::peripheral::DWT;
 use defmt::unwrap;
 use defmt_rtt as _; // global logger
 use hex_literal::hex;
-use nucleo_wl55jc_bsp::hal::{
-    cortex_m,
-    pac::{self, DWT},
-    rcc,
-};
 use panic_probe as _;
 
 const FREQ: u32 = 48_000_000;
@@ -68,12 +64,7 @@ mod tests {
 
     #[init]
     fn init() {
-        let mut cp: pac::CorePeripherals = unwrap!(pac::CorePeripherals::take());
-        let mut dp: pac::Peripherals = unwrap!(pac::Peripherals::take());
-
-        cortex_m::interrupt::free(|cs| unsafe {
-            rcc::set_sysclk_msi_max(&mut dp.FLASH, &mut dp.PWR, &mut dp.RCC, cs)
-        });
+        let mut cp = unwrap!(cortex_m::peripheral::Peripherals::take());
 
         cp.DCB.enable_trace();
         cp.DWT.enable_cycle_counter();
