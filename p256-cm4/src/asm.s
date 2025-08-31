@@ -87,44 +87,6 @@ setzero:
  bx lr
  .size setzero, .-setzero
 
- .type P256_sqrmod_many, %function
-P256_sqrmod_many:
-
-
- push {r8,lr}
-
-0:
- bl P256_sqrmod
-
- ldr r8,[sp,#0]
- subs r8,r8,#1
- str r8,[sp,#0]
- bne 0b
-
- pop {r8,pc}
- .size P256_sqrmod_many, .-P256_sqrmod_many
-
-
- .type P256_sqrmod_many_and_mulmod, %function
-P256_sqrmod_many_and_mulmod:
- push {r9,lr}
-
- bl P256_sqrmod_many
- push {r0-r7}
-
- mov r1,sp
- ldr r2,[sp,#32]
- bl P256_mulmod
- add sp,#36
-
- pop {pc}
- .size P256_sqrmod_many_and_mulmod, .-P256_sqrmod_many_and_mulmod
-
-
-
-
-
-
  .type P256_modinv_sqrt, %function
 P256_modinv_sqrt:
  push {r0-r8,lr}

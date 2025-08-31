@@ -134,3 +134,83 @@ pub unsafe extern "C" fn P256_point_is_on_curve(
         P256_B = sym P256_B,
     )
 }
+
+/// For inputs `A*R mod p` and `N`, computes the result of performing `A^2*R mod p` `N` times.
+///
+/// > **Note**: this function simply calls [`P256_sqrmod`] `N` times in an efficient manner.
+///
+/// # Inputs
+/// Registers `r0` through `r7` shall contain `A*R mod p`.
+///
+/// Register `r8` shall contain `N`, the amount of times to perform the squaring operation.
+///
+/// # Return
+/// On return the result of the operation will be contained in registers `r0` through `r7`.
+///
+/// All other registers are clobbered.
+///
+/// # Safety
+/// The caller must ensure that the ABI for this function is upheld. It is impossible to do so from
+/// normal rust code, so it must only be called from other inline assembly.
+// TODO: make this `extern "custom"` once that is stabilized (https://github.com/rust-lang/rust/issues/140829)
+#[unsafe(naked)]
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn P256_sqrmod_many() {
+    naked_asm!(
+        "
+            push {{r8, lr}}
+            // frame push {{r8, lr}}
+        0:
+            bl {P256_sqrmod}
+
+            ldr r8, [sp, #0]
+            subs r8, r8, #1
+            str r8, [sp, #0]
+            bne 0b
+
+            pop {{r8, pc}}
+        ",
+        P256_sqrmod = sym P256_sqrmod,
+    )
+}
+
+/// If the inputs are `A*R mod p` and `B*R mod p`, calculate the result
+/// of performing the operation `A^2*R mod p` `N` times, and multiplying that value by `B*R mod p`.
+///
+/// # Inputs
+/// `r0` through `r7` shall contain `A*R mod p`.
+///
+/// `r8` shall contain `N`.
+///
+/// `r9` shall contain a valid `*const [u32; 8]`, whose dereference is `B*R mod p`.
+///
+/// # Return
+/// `r0` through `r7` will contain the result of the computation.
+///
+/// All other registers are clobbered.
+///
+/// # Safety
+/// The caller must ensure that the ABI for this function is upheld. It is impossible to do so from
+/// normal rust code, so it must only be called from other inline assembly.
+// TODO: make this `extern "custom"` once that is stabilized (https://github.com/rust-lang/rust/issues/140829)
+#[unsafe(naked)]
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn P256_sqrmod_many_and_mulmod() {
+    naked_asm!(
+        "
+            push {{r9, lr}}
+            // frame push {{r9, lr}}
+            bl {P256_sqrmod_many}
+            push {{r0-r7}}
+            // frame address sp, 40
+            mov r1, sp
+            ldr r2, [sp,#32]
+            bl {P256_mulmod}
+            add sp, #36
+            // frame address sp, 4
+            pop {{pc}}
+        ",
+        P256_sqrmod_many = sym P256_sqrmod_many,
+        P256_mulmod = sym P256_mulmod,
+    )
+}
