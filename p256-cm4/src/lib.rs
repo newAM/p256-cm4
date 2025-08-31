@@ -1,6 +1,8 @@
 #![no_std]
 #![allow(clippy::missing_safety_doc)]
 
+use crate::asm::P256_point_is_on_curve;
+
 #[cfg(target_arch = "arm")]
 core::arch::global_asm!(include_str!("./asm.s"), options(raw));
 
@@ -34,8 +36,6 @@ unsafe extern "C" {
         affine_mont_y: *mut u32,
         jacobian_mont: *const [u32; 8],
     );
-    // bool P256_point_is_on_curve(const uint32_t x_mont[8], const uint32_t y_mont[8]);
-    fn P256_point_is_on_curve(x_mont: *const u32, y_mont: *const u32) -> bool;
     // bool P256_decompress_point(uint32_t y[8], const uint32_t x[8], uint32_t y_parity);
     fn P256_decompress_point(y: *mut u32, x: *const u32, y_parity: u32) -> bool;
 
@@ -251,7 +251,7 @@ pub fn octet_string_to_point(x: &mut [u32; 8], y: &mut [u32; 8], input: &[u8]) -
 
             unsafe { P256_to_montgomery(x_mont.as_mut_ptr(), x.as_ptr()) };
             unsafe { P256_to_montgomery(y_mont.as_mut_ptr(), y.as_ptr()) };
-            unsafe { P256_point_is_on_curve(x_mont.as_ptr(), y_mont.as_ptr()) }
+            unsafe { P256_point_is_on_curve(&raw const x_mont as _, &raw const y_mont as _) }
         } else if (input[0] >> 1) == 1 && input.len() == 33 {
             unsafe { P256_decompress_point(y.as_mut_ptr(), x.as_ptr(), u32::from(input[0] & 1)) }
         } else {
@@ -362,7 +362,10 @@ fn scalarmult_generic_no_scalar_check(
         unsafe { P256_to_montgomery(output_mont_y.as_mut_ptr(), in_y.as_ptr()) };
 
         if unsafe {
-            !P256_point_is_on_curve(output_mont_x.as_mut_ptr(), output_mont_y.as_mut_ptr())
+            !P256_point_is_on_curve(
+                &raw const *output_mont_x as _,
+                &raw const *output_mont_y as _,
+            )
         } {
             false
         } else {
@@ -796,7 +799,12 @@ pub fn verify(
     }
     pk_table[0][2].copy_from_slice(&ONE_MONTGOMERY);
 
-    if unsafe { !P256_point_is_on_curve(pk_table[0][0].as_ptr(), pk_table[0][1].as_ptr()) } {
+    if unsafe {
+        !P256_point_is_on_curve(
+            &raw const pk_table[0][0] as _,
+            &raw const pk_table[0][1] as _,
+        )
+    } {
         return false;
     }
 
