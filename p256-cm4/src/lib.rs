@@ -4,7 +4,11 @@
 #[cfg(target_arch = "arm")]
 core::arch::global_asm!(include_str!("./asm.s"), options(raw));
 
+#[cfg(target_arch = "arm")]
+mod asm;
+
 unsafe extern "C" {
+
     // int P256_divsteps2_31(int delta, uint32_t f, uint32_t g, uint32_t res_matrix[4]);
     fn P256_divsteps2_31(delta: i32, f: u32, g: u32, res_matrix: *mut u32) -> i32;
     // void P256_matrix_mul_fg_9(uint32_t a, uint32_t b, const struct FGInteger fg[2], struct FGInteger *res);
