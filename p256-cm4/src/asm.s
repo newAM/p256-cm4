@@ -29,7 +29,7 @@ arm-none-eabi-gcc \
 # 113 "P256-Cortex-M4/p256-cortex-m4-asm-gcc.S"
  .type mul288x288, %function
 mul288x288:
- push {{r4-r11,lr}}
+ push {r4-r11,lr}
 
 
  mov r4,r0
@@ -39,41 +39,41 @@ mul288x288:
  movs r1,#72
  bl setzero
 
- ldm r5,{{r0-r2,r8-r12,lr}}
+ ldm r5,{r0-r2,r8-r12,lr}
 
  movs r7,#9
 0:
- ldm r6!,{{r5}}
- push {{r6,r7}}
+ ldm r6!,{r5}
+ push {r6,r7}
 
  movs r3,#0
- ldm r4,{{r6,r7}}
+ ldm r4,{r6,r7}
  umaal r6,r3,r5,r0
  umaal r7,r3,r5,r1
- stm r4!,{{r6,r7}}
- ldm r4,{{r6,r7}}
+ stm r4!,{r6,r7}
+ ldm r4,{r6,r7}
  umaal r6,r3,r5,r2
  umaal r7,r3,r5,r8
- stm r4!,{{r6,r7}}
- ldm r4,{{r6,r7}}
+ stm r4!,{r6,r7}
+ ldm r4,{r6,r7}
  umaal r6,r3,r5,r9
  umaal r7,r3,r5,r10
- stm r4!,{{r6,r7}}
- ldm r4,{{r6,r7}}
+ stm r4!,{r6,r7}
+ ldm r4,{r6,r7}
  umaal r6,r3,r5,r11
  umaal r7,r3,r5,r12
- stm r4!,{{r6,r7}}
- ldm r4,{{r6}}
+ stm r4!,{r6,r7}
+ ldm r4,{r6}
  umaal r3,r6,r5,lr
- stm r4!,{{r3,r6}}
+ stm r4!,{r3,r6}
 
  subs r4,r4,#36
- pop {{r6,r7}}
+ pop {r6,r7}
 
  subs r7,r7,#1
  bne 0b
 
- pop {{r4-r11,pc}}
+ pop {r4-r11,pc}
  .size mul288x288, .-mul288x288
 
  .type setzero, %function
@@ -81,7 +81,7 @@ setzero:
  movs r2,#0
  movs r3,#0
 0:
- stm r0!,{{r2,r3}}
+ stm r0!,{r2,r3}
  subs r1,r1,#8
  bne 0b
  bx lr
@@ -89,21 +89,21 @@ setzero:
 # 733 "P256-Cortex-M4/p256-cortex-m4-asm-gcc.S"
  .type P256_mulmod, %function
 P256_mulmod:
- push {{r2,lr}}
+ push {r2,lr}
 
 
 
  sub sp,#28
 
- ldm r2,{{r2,r3,r4,r5}}
+ ldm r2,{r2,r3,r4,r5}
 
- ldm r1!,{{r0,r10,lr}}
+ ldm r1!,{r0,r10,lr}
  umull r6,r11,r2,r0
 
  umull r7,r12,r3,r0
  umaal r7,r11,r2,r10
 
- push {{r6,r7}}
+ push {r6,r7}
 
 
  umull r8,r6,r4,r0
@@ -119,7 +119,7 @@ P256_mulmod:
  umaal r11,r12,r4,lr
  umaal r12,r7,r5,lr
 
- ldm r1!,{{r0,r10,lr}}
+ ldm r1!,{r0,r10,lr}
 
  umaal r9,r6,r2,r0
  umaal r11,r6,r3,r0
@@ -156,14 +156,14 @@ P256_mulmod:
  umaal r10,r0,r4,r8
  umaal r6,r0,r5,r8
 
- push {{r0}}
+ push {r0}
 
 
 
 
  ldr r2,[sp,#40]
  adds r2,r2,#16
- ldm r2,{{r2,r3,r4,r5}}
+ ldm r2,{r2,r3,r4,r5}
 
  ldr r8,[r1],#4
  mov r0,#0
@@ -205,12 +205,12 @@ P256_mulmod:
 
 
 
- ldm r1!,{{r0,r8}}
+ ldm r1!,{r0,r8}
  umaal r11,r9,r2,r0
  str r11,[sp,#32+4]
  umaal r9,r10,r3,r0
  umaal r10,r6,r4,r0
- pop {{r11}}
+ pop {r11}
 
  umaal r11,r6,r5,r0
 
@@ -221,7 +221,7 @@ P256_mulmod:
  umaal r11,r7,r4,r8
  umaal r6,r7,r5,r8
 
- ldm r1!,{{r0,r8}}
+ ldm r1!,{r0,r8}
  umaal r10,r12,r2,r0
  umaal r11,r12,r3,r0
  umaal r6,r12,r4,r0
@@ -233,10 +233,10 @@ P256_mulmod:
  umaal r7,r12,r5,r8
 
 
- push {{r6,r7,r12}}
+ push {r6,r7,r12}
 
  add r7,sp,#12
- ldm r7,{{r0-r8}}
+ ldm r7,{r0-r8}
 
  mov r12,#0
 
@@ -266,7 +266,7 @@ P256_mulmod:
  sbcs r11,r11,#0
  sbcs r12,r12,#0
 
- pop {{r1-r3}}
+ pop {r1-r3}
 
 
  adds r0,lr,r12
@@ -326,7 +326,7 @@ P256_mulmod:
  add sp,sp,#40
 
 
- pop {{pc}}
+ pop {pc}
 
  .size P256_mulmod, .-P256_mulmod
 
@@ -337,7 +337,7 @@ P256_mulmod:
 
  .type P256_sqrmod, %function
 P256_sqrmod:
- push {{lr}}
+ push {lr}
 
 
 
@@ -351,7 +351,7 @@ P256_sqrmod:
 
 
 
- push {{r9,r10}}
+ push {r9,r10}
 
 
 
@@ -364,7 +364,7 @@ P256_sqrmod:
 
 
 
- push {{r9}}
+ push {r9}
 
 
 
@@ -377,7 +377,7 @@ P256_sqrmod:
 
 
 
- push {{r9}}
+ push {r9}
 
 
 
@@ -391,7 +391,7 @@ P256_sqrmod:
 
 
 
- push {{r9}}
+ push {r9}
 
 
 
@@ -405,7 +405,7 @@ P256_sqrmod:
 
 
 
- push {{r9}}
+ push {r9}
 
 
 
@@ -420,7 +420,7 @@ P256_sqrmod:
 
 
 
- push {{r9}}
+ push {r9}
 
 
 
@@ -513,10 +513,10 @@ P256_sqrmod:
 
 
 
- push {{r4,r8,r10}}
+ push {r4,r8,r10}
 
  add r4,sp,#12
- ldm r4,{{r4-r8,r10,r12}}
+ ldm r4,{r4-r8,r10,r12}
 
  X0 .req r10
  X1 .req r12
@@ -562,7 +562,7 @@ P256_sqrmod:
  sbcs X11,X11,#0
  sbcs lr,lr,#0
 
- pop {{X13,X14,X15}}
+ pop {X13,X14,X15}
 
 
  adds X0,X12,lr
@@ -622,19 +622,19 @@ P256_sqrmod:
 
  add sp,#28
 
- pop {{pc}}
+ pop {pc}
 
  .size P256_sqrmod, .-P256_sqrmod
 # 1279 "P256-Cortex-M4/p256-cortex-m4-asm-gcc.S"
  .type P256_submod, %function
 P256_submod:
- ldm r1,{{r3-r10}}
- ldm r2!,{{r0,r1,r11,r12}}
+ ldm r1,{r3-r10}
+ ldm r2!,{r0,r1,r11,r12}
  subs r3,r0
  sbcs r4,r4,r1
  sbcs r5,r5,r11
  sbcs r6,r6,r12
- ldm r2,{{r0,r1,r11,r12}}
+ ldm r2,{r0,r1,r11,r12}
  sbcs r7,r7,r0
  sbcs r8,r8,r1
  sbcs r9,r9,r11
@@ -657,13 +657,13 @@ P256_submod:
 # 1315 "P256-Cortex-M4/p256-cortex-m4-asm-gcc.S"
  .type P256_addmod, %function
 P256_addmod:
- ldm r2,{{r2-r9}}
- ldm r1!,{{r0,r10,r11,r12}}
+ ldm r2,{r2-r9}
+ ldm r1!,{r0,r10,r11,r12}
  adds r2,r0
  adcs r3,r3,r10
  adcs r4,r4,r11
  adcs r5,r5,r12
- ldm r1,{{r0,r1,r11,r12}}
+ ldm r1,{r0,r1,r11,r12}
  adcs r6,r6,r0
  adcs r7,r7,r1
  adcs r8,r8,r11
@@ -701,7 +701,7 @@ P256_addmod:
 P256_sqrmod_many:
 
 
- push {{r8,lr}}
+ push {r8,lr}
 
 0:
  bl P256_sqrmod
@@ -711,23 +711,23 @@ P256_sqrmod_many:
  str r8,[sp,#0]
  bne 0b
 
- pop {{r8,pc}}
+ pop {r8,pc}
  .size P256_sqrmod_many, .-P256_sqrmod_many
 
 
  .type P256_sqrmod_many_and_mulmod, %function
 P256_sqrmod_many_and_mulmod:
- push {{r9,lr}}
+ push {r9,lr}
 
  bl P256_sqrmod_many
- push {{r0-r7}}
+ push {r0-r7}
 
  mov r1,sp
  ldr r2,[sp,#32]
  bl P256_mulmod
  add sp,#36
 
- pop {{pc}}
+ pop {pc}
  .size P256_sqrmod_many_and_mulmod, .-P256_sqrmod_many_and_mulmod
 
 
@@ -737,43 +737,43 @@ P256_sqrmod_many_and_mulmod:
 
  .type P256_modinv_sqrt, %function
 P256_modinv_sqrt:
- push {{r0-r8,lr}}
+ push {r0-r8,lr}
 
 
  mov r8,#1
  mov r9,sp
  bl P256_sqrmod_many_and_mulmod
- push {{r0-r7}}
+ push {r0-r7}
 
 
  bl P256_sqrmod
  bl P256_sqrmod
- push {{r0-r7}}
+ push {r0-r7}
 
 
  mov r1,sp
  add r2,sp,#32
  bl P256_mulmod
  add r8,sp,#32
- stm r8,{{r0-r7}}
+ stm r8,{r0-r7}
 
 
  mov r8,#8-4
  add r9,sp,#32
  bl P256_sqrmod_many_and_mulmod
- push {{r0-r7}}
+ push {r0-r7}
 
 
  mov r8,#16-8
  mov r9,sp
  bl P256_sqrmod_many_and_mulmod
- push {{r0-r7}}
+ push {r0-r7}
 
 
  mov r8,#16
  mov r9,sp
  bl P256_sqrmod_many_and_mulmod
- push {{r0-r7}}
+ push {r0-r7}
 
 
  mov r8,#32
@@ -813,7 +813,7 @@ P256_modinv_sqrt:
  mov r8,#256-252
  add r9,sp,#96
  bl P256_sqrmod_many_and_mulmod
- stm sp,{{r0-r7}}
+ stm sp,{r0-r7}
 
 
  mov r1,sp
@@ -834,7 +834,7 @@ P256_modinv_sqrt:
 
  add sp,#6*32+4
 
- pop {{pc}}
+ pop {pc}
 
  .size P256_modinv_sqrt, .-P256_modinv_sqrt
 
@@ -896,15 +896,15 @@ R2_mod_p:
  .type P256_to_montgomery, %function
 P256_to_montgomery:
  .global P256_to_montgomery
- push {{r0,r4-r11,lr}}
+ push {r0,r4-r11,lr}
 
 
  adr r2,R2_mod_p
  bl P256_mulmod
- pop {{r8}}
+ pop {r8}
 
- stm r8,{{r0-r7}}
- pop {{r4-r11,pc}}
+ stm r8,{r0-r7}
+ pop {r4-r11,pc}
  .size P256_to_montgomery, .-P256_to_montgomery
 
 
@@ -914,28 +914,28 @@ P256_to_montgomery:
  .type P256_from_montgomery, %function
 P256_from_montgomery:
  .global P256_from_montgomery
- push {{r0,r4-r11,lr}}
+ push {r0,r4-r11,lr}
 
 
  movs r2,#0
  movs r3,#0
- push {{r2-r3}}
+ push {r2-r3}
 
- push {{r2-r3}}
+ push {r2-r3}
 
- push {{r2-r3}}
+ push {r2-r3}
 
  movs r2,#1
- push {{r2-r3}}
+ push {r2-r3}
 
  mov r2,sp
  bl P256_mulmod
  add sp,#32
 
- pop {{r8}}
+ pop {r8}
 
- stm r8,{{r0-r7}}
- pop {{r4-r11,pc}}
+ stm r8,{r0-r7}
+ pop {r4-r11,pc}
  .size P256_from_montgomery, .-P256_from_montgomery
 
 
@@ -946,10 +946,10 @@ P256_from_montgomery:
  .type P256_check_range_p, %function
 P256_check_range_p:
  .global P256_check_range_p
- push {{r4-r8,lr}}
+ push {r4-r8,lr}
 
 
- ldm r0,{{r1-r8}}
+ ldm r0,{r1-r8}
 
  movs r0,#0xffffffff
 
@@ -965,7 +965,7 @@ P256_check_range_p:
  sbcs r0,r0,r0
  lsrs r0,#31
 
- pop {{r4-r8,pc}}
+ pop {r4-r8,pc}
 
  .size P256_check_range_p, .-P256_check_range_p
 
@@ -993,11 +993,11 @@ P256_order_mu:
 
  .type P256_reduce_mod_n_once, %function
 P256_reduce_mod_n_once:
- push {{lr}}
+ push {lr}
 
 
  adr r10,P256_order
- ldm r10,{{r10,r11,r12,lr}}
+ ldm r10,{r10,r11,r12,lr}
  subs r0,r10
  sbcs r1,r1,r11
  sbcs r2,r2,r12
@@ -1024,14 +1024,14 @@ P256_reduce_mod_n_once:
  adcs r7,r7,r9
  adcs r8,r8,#0
 
- pop {{pc}}
+ pop {pc}
  .size P256_reduce_mod_n_once, .-P256_reduce_mod_n_once
 
 
 
  .type P256_reduce_mod_n_64bytes, %function
 P256_reduce_mod_n_64bytes:
- push {{r0,r4-r11,lr}}
+ push {r0,r4-r11,lr}
 
  sub sp,sp,#108
 
@@ -1048,14 +1048,14 @@ P256_reduce_mod_n_64bytes:
  adr r2,P256_order
  bl mul288x288
 
- ldm r10,{{r0-r8}}
- pop {{r9-r12}}
+ ldm r10,{r0-r8}
+ pop {r9-r12}
 
  subs r0,r0,r9
  sbcs r1,r1,r10
  sbcs r2,r2,r11
  sbcs r3,r3,r12
- pop {{r9-r12,lr}}
+ pop {r9-r12,lr}
 
  sbcs r4,r4,r9
  sbcs r5,r5,r10
@@ -1067,12 +1067,12 @@ P256_reduce_mod_n_64bytes:
  bl P256_reduce_mod_n_once
  add sp,sp,#72
 
- pop {{r9}}
+ pop {r9}
 
 
- stm r9,{{r0-r7}}
+ stm r9,{r0-r7}
 
- pop {{r4-r11,pc}}
+ pop {r4-r11,pc}
  .size P256_reduce_mod_n_64bytes, .-P256_reduce_mod_n_64bytes
 
 
@@ -1081,16 +1081,16 @@ P256_reduce_mod_n_64bytes:
  .type P256_reduce_mod_n_32bytes, %function
 P256_reduce_mod_n_32bytes:
  .global P256_reduce_mod_n_32bytes
- push {{r0,r4-r11,lr}}
+ push {r0,r4-r11,lr}
 
 
- ldm r1,{{r0-r7}}
+ ldm r1,{r0-r7}
  mov r8,#0
  bl P256_reduce_mod_n_once
- pop {{r8}}
+ pop {r8}
 
- stm r8,{{r0-r7}}
- pop {{r4-r11,pc}}
+ stm r8,{r0-r7}
+ pop {r4-r11,pc}
  .size P256_reduce_mod_n_32bytes, .-P256_reduce_mod_n_32bytes
 
 
@@ -1101,19 +1101,19 @@ P256_reduce_mod_n_32bytes:
  .type P256_add_mod_n, %function
 P256_add_mod_n:
  .global P256_add_mod_n
- push {{r0,r4-r11,lr}}
+ push {r0,r4-r11,lr}
 
 
 
  mov r12,r1
 
- ldm r2,{{r4-r11}}
- ldm r12!,{{r0-r3}}
+ ldm r2,{r4-r11}
+ ldm r12!,{r0-r3}
  adds r0,r4
  adcs r1,r1,r5
  adcs r2,r2,r6
  adcs r3,r3,r7
- ldm r12,{{r4-r7}}
+ ldm r12,{r4-r7}
  adcs r4,r4,r8
  adcs r5,r5,r9
  adcs r6,r6,r10
@@ -1123,11 +1123,11 @@ P256_add_mod_n:
 
  bl P256_reduce_mod_n_once
  bl P256_reduce_mod_n_once
- pop {{r8}}
+ pop {r8}
 
- stm r8,{{r0-r7}}
+ stm r8,{r0-r7}
 
- pop {{r4-r11,pc}}
+ pop {r4-r11,pc}
 
  .size P256_add_mod_n, .-P256_add_mod_n
 
@@ -1141,21 +1141,21 @@ P256_add_mod_n:
 P256_mul_mod_n:
  .global P256_mul_mod_n
  movs r3,#0
- push {{r3-r10,lr}}
+ push {r3-r10,lr}
 
 
 
  mov r4,r0
 
- ldm r1,{{r1,r3,r5-r10}}
- push {{r1,r3,r5-r10}}
+ ldm r1,{r1,r3,r5-r10}
+ push {r1,r3,r5-r10}
 
 
  movs r1,#0
- push {{r1}}
+ push {r1}
 
- ldm r2,{{r1,r3,r5-r10}}
- push {{r1,r3,r5-r10}}
+ ldm r2,{r1,r3,r5-r10}
+ push {r1,r3,r5-r10}
 
 
  sub sp,#72
@@ -1172,7 +1172,7 @@ P256_mul_mod_n:
 
  add sp,#144
 
- pop {{r4-r10,pc}}
+ pop {r4-r10,pc}
 
  .size P256_mul_mod_n, .-P256_mul_mod_n
 
@@ -1184,7 +1184,7 @@ P256_mul_mod_n:
  .type P256_divsteps2_31, %function
 P256_divsteps2_31:
  .global P256_divsteps2_31
- push {{r3,r4-r8,lr}}
+ push {r3,r4-r8,lr}
 
 
 
@@ -1240,10 +1240,10 @@ P256_divsteps2_31:
  subs lr,lr,#1
  bne 0b
 
- pop {{r3}}
- stm r3!,{{r4-r7}}
+ pop {r3}
+ stm r3!,{r4-r7}
 
- pop {{r4-r8,pc}}
+ pop {r4-r8,pc}
  .size P256_divsteps2_31, .-P256_divsteps2_31
 
 
@@ -1253,7 +1253,7 @@ P256_divsteps2_31:
  .type P256_matrix_mul_fg_9, %function
 P256_matrix_mul_fg_9:
  .global P256_matrix_mul_fg_9
- push {{r4-r11,lr}}
+ push {r4-r11,lr}
 
 
 
@@ -1270,20 +1270,20 @@ P256_matrix_mul_fg_9:
  eors r1,r1,r5
  subs r1,r1,r5
 
- ldm r2!,{{r6}}
+ ldm r2!,{r6}
  ldr r7,[r2,#36]
 
 
  eors r4,r4,r6
  eors r5,r5,r7
  eors r4,r4,r5
- stm r3!,{{r5}}
- push {{r1,r2,r3}}
+ stm r3!,{r5}
+ push {r1,r2,r3}
 
 
 
 
- ldm r2!,{{r1,r3,r5-r11}}
+ ldm r2!,{r1,r3,r5-r11}
  eors r1,r1,r4
  eors r3,r3,r4
  eors r5,r5,r4
@@ -1321,23 +1321,23 @@ P256_matrix_mul_fg_9:
 
 
 
- pop {{r0,r4}}
+ pop {r0,r4}
 
  adds r4,r4,#40
- ldm r4!,{{r8,r9}}
+ ldm r4!,{r8,r9}
  mov r10,#0
  umaal r1,r10,r0,r8
  umaal r2,r10,r0,r9
  adds r1,r1,r1
  adcs r2,r2,r2
- ldm r4!,{{r1,r8,r9}}
+ ldm r4!,{r1,r8,r9}
  umaal r10,r11,r0,r1
  umaal r11,r3,r0,r8
  umaal r3,r5,r0,r9
  adcs r10,r10,r10
  adcs r11,r11,r11
  adcs r3,r3,r3
- ldm r4,{{r1,r4,r8,r9}}
+ ldm r4,{r1,r4,r8,r9}
  umaal r5,r6,r0,r1
  umaal r6,r7,r0,r4
  umaal r7,r12,r0,r8
@@ -1348,12 +1348,12 @@ P256_matrix_mul_fg_9:
  adcs r12,r12,r12
  sbcs lr,lr,lr
  mvn lr,lr
- pop {{r1}}
+ pop {r1}
 
- stm r1!,{{r2,r10,r11}}
- stm r1!,{{r3,r5,r6,r7,r12,lr}}
+ stm r1!,{r2,r10,r11}
+ stm r1!,{r3,r5,r6,r7,r12,lr}
 
- pop {{r4-r11,pc}}
+ pop {r4-r11,pc}
  .size P256_matrix_mul_fg_9, .-P256_matrix_mul_fg_9
 
 
@@ -1364,7 +1364,7 @@ P256_matrix_mul_fg_9:
  .type P256_matrix_mul_mod_n, %function
 P256_matrix_mul_mod_n:
  .global P256_matrix_mul_mod_n
- push {{r4-r11,lr}}
+ push {r4-r11,lr}
 
 
 
@@ -1381,20 +1381,20 @@ P256_matrix_mul_mod_n:
  eors r1,r1,r5
  subs r1,r1,r5
 
- ldm r2!,{{r6}}
+ ldm r2!,{r6}
  ldr r7,[r2,#32]
 
 
  eors r4,r4,r6
  eors r5,r5,r7
  eors r4,r4,r5
- stm r3!,{{r5}}
- push {{r1,r2,r3}}
+ stm r3!,{r5}
+ push {r1,r2,r3}
 
 
 
 
- ldm r2,{{r1-r3,r5-r9}}
+ ldm r2,{r1-r3,r5-r9}
  eors r1,r1,r4
  eors r2,r2,r4
  eors r3,r3,r4
@@ -1444,20 +1444,20 @@ P256_matrix_mul_mod_n:
  umaal r12,lr,r0,r9
 
 
- pop {{r0,r6}}
+ pop {r0,r6}
 
  adds r6,r6,#36
- ldm r6!,{{r8,r9}}
+ ldm r6!,{r8,r9}
  movs r7,#0
  umaal r10,r7,r0,r8
  umaal r11,r7,r0,r9
- ldm r6!,{{r8,r9}}
+ ldm r6!,{r8,r9}
  umaal r1,r7,r0,r8
  umaal r2,r7,r0,r9
- ldm r6!,{{r8,r9}}
+ ldm r6!,{r8,r9}
  umaal r3,r7,r0,r8
  umaal r4,r7,r0,r9
- ldm r6!,{{r8,r9}}
+ ldm r6!,{r8,r9}
  umaal r5,r7,r0,r8
  umaal r12,r7,r0,r9
  add lr,lr,r7
@@ -1503,12 +1503,12 @@ P256_matrix_mul_mod_n:
  umaal r11,r12,r6,r8
  umaal r12,lr,r6,r0
 
- pop {{r6}}
+ pop {r6}
 
- stm r6!,{{r7}}
- stm r6!,{{r1,r2,r3,r4,r5,r11,r12}}
+ stm r6!,{r7}
+ stm r6!,{r1,r2,r3,r4,r5,r11,r12}
 
- pop {{r4-r11,pc}}
+ pop {r4-r11,pc}
 
  .ltorg
  .size P256_matrix_mul_mod_n, .-P256_matrix_mul_mod_n
@@ -1537,9 +1537,9 @@ P256_order:
  .type P256_check_range_n, %function
 P256_check_range_n:
  .global P256_check_range_n
- push {{r4-r11,lr}}
+ push {r4-r11,lr}
 
- ldm r0,{{r1-r8}}
+ ldm r0,{r1-r8}
  orrs r0,r1,r2
  orrs r0,r3
  orrs r0,r4
@@ -1550,12 +1550,12 @@ P256_check_range_n:
  beq 0f
 
  adr r0,P256_order
- ldm r0!,{{r9-r12}}
+ ldm r0!,{r9-r12}
  subs r1,r9
  sbcs r2,r2,r10
  sbcs r3,r3,r11
  sbcs r4,r4,r12
- ldm r0,{{r0-r3}}
+ ldm r0,{r0-r3}
  sbcs r5,r5,r0
  sbcs r6,r6,r1
  sbcs r7,r7,r2
@@ -1564,7 +1564,7 @@ P256_check_range_n:
  sbcs r0,r0,r0
  lsrs r0,#31
 0:
- pop {{r4-r11,pc}}
+ pop {r4-r11,pc}
 
  .size P256_check_range_n, .-P256_check_range_n
 
@@ -1601,36 +1601,36 @@ three_mont:
  .type P256_point_is_on_curve, %function
 P256_point_is_on_curve:
  .global P256_point_is_on_curve
- push {{r0,r4-r11,lr}}
+ push {r0,r4-r11,lr}
 
 
 
 
 
 
- ldm r1,{{r0-r7}}
+ ldm r1,{r0-r7}
  bl P256_sqrmod
- push {{r0-r7}}
+ push {r0-r7}
 
 
 
  ldr r0,[sp,#32]
- ldm r0,{{r0-r7}}
+ ldm r0,{r0-r7}
  bl P256_sqrmod
- push {{r0-r7}}
+ push {r0-r7}
 
 
 
  mov r1,sp
  adr r2,three_mont
  bl P256_submod
- stm sp,{{r0-r7}}
+ stm sp,{r0-r7}
 
 
  ldr r1,[sp,#64]
  mov r2,sp
  bl P256_mulmod
- stm sp,{{r0-r7}}
+ stm sp,{r0-r7}
 
 
  add r1,sp,#32
@@ -1639,13 +1639,13 @@ P256_point_is_on_curve:
 
 
  adr r8,b_mont
- ldm r8!,{{r9-r12}}
+ ldm r8!,{r9-r12}
  eors r0,r9
  ittt eq
  eorseq r1,r10
  eorseq r2,r11
  eorseq r3,r12
- ldm r8,{{r9-r12}}
+ ldm r8,{r9-r12}
  itttt eq
  eorseq r4,r9
  eorseq r5,r10
@@ -1658,7 +1658,7 @@ P256_point_is_on_curve:
  add sp,#68
 
 
- pop {{r4-r11,pc}}
+ pop {r4-r11,pc}
 
  .size P256_point_is_on_curve, .-P256_point_is_on_curve
 
@@ -1682,7 +1682,7 @@ P256_p:
  .type P256_decompress_point, %function
 P256_decompress_point:
  .global P256_decompress_point
- push {{r0,r2,r4-r11,lr}}
+ push {r0,r2,r4-r11,lr}
 
 
  sub sp,#32
@@ -1690,42 +1690,42 @@ P256_decompress_point:
 
  mov r0,sp
  bl P256_to_montgomery
- ldm sp,{{r0-r7}}
+ ldm sp,{r0-r7}
 
  bl P256_sqrmod
- push {{r0-r7}}
+ push {r0-r7}
 
  mov r1,sp
  adr r2,three_mont
  bl P256_submod
- stm sp,{{r0-r7}}
+ stm sp,{r0-r7}
 
 
  add r1,sp,#32
  mov r2,sp
  bl P256_mulmod
- stm sp,{{r0-r7}}
+ stm sp,{r0-r7}
 
  mov r1,sp
  adr r2,b_mont
  bl P256_addmod
- stm sp,{{r0-r7}}
+ stm sp,{r0-r7}
 
  mov r8,#1
  bl P256_modinv_sqrt
  add r8,sp,#32
- stm r8,{{r0-r7}}
+ stm r8,{r0-r7}
 
  bl P256_sqrmod
 
- pop {{r8-r11}}
+ pop {r8-r11}
 
  eors r8,r0
  ittt eq
  eorseq r9,r1
  eorseq r10,r2
  eorseq r11,r3
- pop {{r8-r11}}
+ pop {r8-r11}
 
  itttt eq
  eorseq r8,r4
@@ -1751,7 +1751,7 @@ P256_decompress_point:
 1:
  add sp,#32+8
 
- pop {{r4-r11,pc}}
+ pop {r4-r11,pc}
 
  .size P256_decompress_point, .-P256_decompress_point
 
@@ -1763,44 +1763,44 @@ P256_decompress_point:
  .type P256_jacobian_to_affine, %function
 P256_jacobian_to_affine:
  .global P256_jacobian_to_affine
- push {{r0,r1,r2,r4-r11,lr}}
+ push {r0,r1,r2,r4-r11,lr}
 
 
 
  adds r2,#64
- ldm r2,{{r0-r7}}
+ ldm r2,{r0-r7}
  mov r8,#0
  bl P256_modinv_sqrt
- push {{r0-r7}}
+ push {r0-r7}
 
 
  bl P256_sqrmod
- push {{r0-r7}}
+ push {r0-r7}
 
 
  add r1,sp,#32
  mov r2,sp
  bl P256_mulmod
  add r8,sp,#32
- stm r8,{{r0-r7}}
+ stm r8,{r0-r7}
 
  mov r1,sp
  ldr r2,[sp,#72]
  bl P256_mulmod
  ldr r8,[sp,#64]
- stm r8,{{r0-r7}}
+ stm r8,{r0-r7}
 
  ldr r2,[sp,#72]
  add r1,sp,#32
  adds r2,r2,#32
  bl P256_mulmod
  ldr r8,[sp,#68]
- stm r8,{{r0-r7}}
+ stm r8,{r0-r7}
 
  add sp,#76
 
 
- pop {{r4-r11,pc}}
+ pop {r4-r11,pc}
  .size P256_jacobian_to_affine, .-P256_jacobian_to_affine
 
 
@@ -1810,7 +1810,7 @@ P256_jacobian_to_affine:
  .type P256_double_j, %function
 P256_double_j:
  .global P256_double_j
- push {{r0,r1,r4-r11,lr}}
+ push {r0,r1,r4-r11,lr}
 
 
 
@@ -1818,9 +1818,9 @@ P256_double_j:
 
 
  adds r1,#64
- ldm r1,{{r0-r7}}
+ ldm r1,{r0-r7}
  bl P256_sqrmod
- push {{r0-r7}}
+ push {r0-r7}
 
 
 
@@ -1830,13 +1830,13 @@ P256_double_j:
  bl P256_mulmod
  ldr r8,[sp,#32]
  add r8,#64
- stm r8,{{r0-r7}}
+ stm r8,{r0-r7}
 
 
  ldr r1,[sp,#36]
  mov r2,sp
  bl P256_addmod
- push {{r0-r7}}
+ push {r0-r7}
 
 
 
@@ -1844,14 +1844,14 @@ P256_double_j:
  add r2,sp,#32
  bl P256_submod
  add r8,sp,#32
- stm r8,{{r0-r7}}
+ stm r8,{r0-r7}
 
 
  add r1,sp,#32
  mov r2,sp
  bl P256_mulmod
  add r8,sp,#32
- stm r8,{{r0-r7}}
+ stm r8,{r0-r7}
 
 
  lsl r8,r0,#31
@@ -1871,31 +1871,31 @@ P256_double_j:
  rrxs r2,r2
  rrxs r1,r1
  rrx r0,r0
- stm sp,{{r0-r7}}
+ stm sp,{r0-r7}
 
 
  add r1,sp,#32
  mov r2,sp
  bl P256_addmod
  add r8,sp,#32
- stm r8,{{r0-r7}}
+ stm r8,{r0-r7}
 
 
  bl P256_sqrmod
- stm sp,{{r0-r7}}
+ stm sp,{r0-r7}
 
 
  ldr r0,[sp,#68]
  adds r0,#32
- ldm r0,{{r0-r7}}
+ ldm r0,{r0-r7}
  bl P256_sqrmod
  ldr r8,[sp,#64]
  add r8,#32
- stm r8,{{r0-r7}}
+ stm r8,{r0-r7}
 
 
  bl P256_sqrmod
- push {{r0-r7}}
+ push {r0-r7}
 
 
 
@@ -1904,33 +1904,33 @@ P256_double_j:
  bl P256_mulmod
  ldr r8,[sp,#96]
  add r8,#32
- stm r8,{{r0-r7}}
+ stm r8,{r0-r7}
 
 
  bl P256_times2
  ldr r8,[sp,#96]
- stm r8,{{r0-r7}}
+ stm r8,{r0-r7}
 
 
  add r1,sp,#32
  mov r2,r8
  bl P256_submod
  ldr r8,[sp,#96]
- stm r8,{{r0-r7}}
+ stm r8,{r0-r7}
 
 
  mov r2,r8
  add r1,r2,#32
  bl P256_submod
  add r8,sp,#32
- stm r8,{{r0-r7}}
+ stm r8,{r0-r7}
 
 
  add r1,sp,#64
  add r2,sp,#32
  bl P256_mulmod
  add r8,sp,#64
- stm r8,{{r0-r7}}
+ stm r8,{r0-r7}
 
 
  add r1,sp,#64
@@ -1938,12 +1938,12 @@ P256_double_j:
  bl P256_submod
  ldr r8,[sp,#96]
  add r8,#32
- stm r8,{{r0-r7}}
+ stm r8,{r0-r7}
 
  add sp,#104
 
 
- pop {{r4-r11,pc}}
+ pop {r4-r11,pc}
  .size P256_double_j, .-P256_double_j
 
 
@@ -1952,11 +1952,11 @@ P256_double_j:
 
  .type add_sub_helper, %function
 add_sub_helper:
- push {{lr}}
+ push {lr}
 
- ldm r1!,{{r5-r12}}
- stm r0!,{{r5-r12}}
- ldm r1!,{{r5-r12}}
+ ldm r1!,{r5-r12}
+ stm r0!,{r5-r12}
+ ldm r1!,{r5-r12}
  cbz r2,0f
 
  mov lr,#0
@@ -1970,10 +1970,10 @@ add_sub_helper:
  sbcs r11,r2,r11
  sbcs r12,r4,r12
 0:
- stm r0!,{{r5-r12}}
+ stm r0!,{r5-r12}
  cbnz r3,1f
- ldm r1,{{r5-r12}}
- stm r0,{{r5-r12}}
+ ldm r1,{r5-r12}
+ stm r0,{r5-r12}
  b 2f
 1:
 
@@ -1984,23 +1984,23 @@ add_sub_helper:
  mov r8,#0xffffffff
  mov r9,#0xfffffffe
 
- stm r0,{{r3-r10}}
+ stm r0,{r3-r10}
 2:
- pop {{pc}}
+ pop {pc}
 
  .size add_sub_helper, .-add_sub_helper
 # 2857 "P256-Cortex-M4/p256-cortex-m4-asm-gcc.S"
  .type P256_add_sub_j, %function
 P256_add_sub_j:
  .global P256_add_sub_j
- push {{r0-r11,lr}}
+ push {r0-r11,lr}
 
 
 
 
 
  add r4,r0,#64
- ldm r4,{{r4-r11}}
+ ldm r4,{r4-r11}
  orrs r4,r5
  orrs r4,r6
  orrs r4,r7
@@ -2014,7 +2014,7 @@ P256_add_sub_j:
  bl add_sub_helper
  add sp,#16
 
- pop {{r4-r11,pc}}
+ pop {r4-r11,pc}
 2:
 
 
@@ -2027,9 +2027,9 @@ P256_add_sub_j:
 
 
  adds r1,#64
- ldm r1,{{r0-r7}}
+ ldm r1,{r0-r7}
  bl P256_sqrmod
- push {{r0-r7}}
+ push {r0-r7}
 
 
 
@@ -2037,14 +2037,14 @@ P256_add_sub_j:
  mov r2,sp
  bl P256_mulmod
  ldr r8,[sp,#32]
- stm r8,{{r0-r7}}
+ stm r8,{r0-r7}
 
 
  ldr r1,[sp,#36]
  adds r1,#64
  mov r2,sp
  bl P256_mulmod
- stm sp,{{r0-r7}}
+ stm sp,{r0-r7}
 
 
  ldr r1,[sp,#32]
@@ -2053,7 +2053,7 @@ P256_add_sub_j:
  bl P256_mulmod
  ldr r8,[sp,#32]
  add r8,#32
- stm r8,{{r0-r7}}
+ stm r8,{r0-r7}
  b 101f
 100:
  sub sp,#32
@@ -2063,9 +2063,9 @@ P256_add_sub_j:
 
  ldr r1,[sp,#32]
  adds r1,#64
- ldm r1,{{r0-r7}}
+ ldm r1,{r0-r7}
  bl P256_sqrmod
- push {{r0-r7}}
+ push {r0-r7}
 
 
 
@@ -2073,21 +2073,21 @@ P256_add_sub_j:
  mov r2,sp
  bl P256_mulmod
  add r8,sp,#32
- stm r8,{{r0-r7}}
+ stm r8,{r0-r7}
 
 
  ldr r1,[sp,#64]
  adds r1,#64
  mov r2,sp
  bl P256_mulmod
- stm sp,{{r0-r7}}
+ stm sp,{r0-r7}
 
 
  ldr r1,[sp,#68]
  adds r1,#32
  mov r2,sp
  bl P256_mulmod
- stm sp,{{r0-r7}}
+ stm sp,{r0-r7}
 
 
 
@@ -2095,11 +2095,11 @@ P256_add_sub_j:
  add r2,sp,#32
  bl P256_submod
  ldr r8,[sp,#64]
- stm r8,{{r0-r7}}
+ stm r8,{r0-r7}
 
 
  bl P256_sqrmod
- push {{r0-r7}}
+ push {r0-r7}
 
 
 
@@ -2108,7 +2108,7 @@ P256_add_sub_j:
  bl P256_mulmod
  ldr r8,[sp,#96]
  add r8,#64
- stm r8,{{r0-r7}}
+ stm r8,{r0-r7}
 
 
  ldr r1,[sp,#108]
@@ -2119,7 +2119,7 @@ P256_add_sub_j:
  bl P256_mulmod
  ldr r8,[sp,#96]
  add r8,#64
- stm r8,{{r0-r7}}
+ stm r8,{r0-r7}
 102:
 
 
@@ -2127,7 +2127,7 @@ P256_add_sub_j:
  mov r2,sp
  bl P256_mulmod
  ldr r8,[sp,#96]
- stm r8,{{r0-r7}}
+ stm r8,{r0-r7}
 
 
  orrs r1,r0
@@ -2138,7 +2138,7 @@ P256_add_sub_j:
  orrs r1,r6
  orrs r0,r1,r7
 3:
- push {{r0}}
+ push {r0}
 
 
 
@@ -2154,10 +2154,10 @@ P256_add_sub_j:
 5:
  ldr r8,[sp,#100]
  add r8,#32
- stm r8,{{r0-r7}}
+ stm r8,{r0-r7}
 
 
- pop {{r8}}
+ pop {r8}
 
 
  orrs r1,r0
@@ -2174,7 +2174,7 @@ P256_add_sub_j:
 
  add sp,#96
 
- ldm sp,{{r0-r3}}
+ ldm sp,{r0-r3}
  bl add_sub_helper
 
  ldr r0,[sp,#0]
@@ -2182,7 +2182,7 @@ P256_add_sub_j:
  add sp,#16
 
  bl P256_double_j
- pop {{r4-r11,pc}}
+ pop {r4-r11,pc}
 6:
 
 
@@ -2191,54 +2191,54 @@ P256_add_sub_j:
  mov r2,sp
  bl P256_mulmod
  add r8,sp,#64
- stm r8,{{r0-r7}}
+ stm r8,{r0-r7}
 
 
  ldr r0,[sp,#96]
  adds r0,#32
- ldm r0,{{r0-r7}}
+ ldm r0,{r0-r7}
  bl P256_sqrmod
- stm sp,{{r0-r7}}
+ stm sp,{r0-r7}
 
 
  add r1,sp,#32
  ldr r2,[sp,#96]
  bl P256_mulmod
  add r8,sp,#32
- stm r8,{{r0-r7}}
+ stm r8,{r0-r7}
 
 
  mov r1,sp
  ldr r2,[sp,#96]
  bl P256_submod
  ldr r8,[sp,#96]
- stm r8,{{r0-r7}}
+ stm r8,{r0-r7}
 
 
  add r0,sp,#64
- ldm r0,{{r0-r7}}
+ ldm r0,{r0-r7}
  bl P256_times2
- stm sp,{{r0-r7}}
+ stm sp,{r0-r7}
 
 
  ldr r1,[sp,#96]
  mov r2,sp
  bl P256_submod
  ldr r8,[sp,#96]
- stm r8,{{r0-r7}}
+ stm r8,{r0-r7}
 
 
  add r1,sp,#64
  ldr r2,[sp,#96]
  bl P256_submod
- stm sp,{{r0-r7}}
+ stm sp,{r0-r7}
 
 
  ldr r1,[sp,#96]
  adds r1,#32
  mov r2,sp
  bl P256_mulmod
- stm sp,{{r0-r7}}
+ stm sp,{r0-r7}
 
 
  ldr r0,[sp,#104]
@@ -2252,12 +2252,12 @@ P256_add_sub_j:
 8:
  ldr r8,[sp,#96]
  add r8,#32
- stm r8,{{r0-r7}}
+ stm r8,{r0-r7}
 
  add sp,#112
 
 
- pop {{r4-r11,pc}}
+ pop {r4-r11,pc}
  .size P256_add_sub_j, .-P256_add_sub_j
 
 
@@ -2268,15 +2268,15 @@ P256_add_sub_j:
  .type P256_verify_last_step, %function
 P256_verify_last_step:
  .global P256_verify_last_step
- push {{r0,r1,r4-r11,lr}}
+ push {r0,r1,r4-r11,lr}
 
 
  sub sp,#32
 # 3158 "P256-Cortex-M4/p256-cortex-m4-asm-gcc.S"
  add r1,#64
- ldm r1,{{r0-r7}}
+ ldm r1,{r0-r7}
  bl P256_sqrmod
- push {{r0-r7}}
+ push {r0-r7}
 
 
 
@@ -2302,13 +2302,13 @@ P256_verify_last_step:
 
 
  ldr r8,[sp,#68]
- ldm r8!,{{r9-r12}}
+ ldm r8!,{r9-r12}
  eors r0,r9
  ittt eq
  eorseq r1,r10
  eorseq r2,r11
  eorseq r3,r12
- ldm r8!,{{r9-r12}}
+ ldm r8!,{r9-r12}
  itttt eq
  eorseq r4,r9
  eorseq r5,r10
@@ -2319,10 +2319,10 @@ P256_verify_last_step:
 
 
  adr r0,P256_order
- ldm r0,{{r8-r11}}
+ ldm r0,{r8-r11}
  ldr r0,[sp,#64]
  cbz r0,0f
- ldm r0,{{r0-r7}}
+ ldm r0,{r0-r7}
  adds r0,r8
  adcs r1,r1,r9
  adcs r2,r2,r10
@@ -2344,7 +2344,7 @@ P256_verify_last_step:
  bcs 0f
 
  add r8,sp,#32
- stm r8,{{r0-r7}}
+ stm r8,{r0-r7}
  movs r2,#0
  str r2,[sp,#64]
 
@@ -2356,32 +2356,32 @@ P256_verify_last_step:
 1:
  add sp,#72
 
- pop {{r4-r11,pc}}
+ pop {r4-r11,pc}
 
  .size P256_verify_last_step, .-P256_verify_last_step
 # 3252 "P256-Cortex-M4/p256-cortex-m4-asm-gcc.S"
  .type P256_negate_mod_m_if, %function
 P256_negate_mod_m_if:
- push {{r4-r8,lr}}
+ push {r4-r8,lr}
 
  rsb r8,r2,#1
  movs r6,#8
  subs r7,r7
 0:
- ldm r1!,{{r4,r12}}
- ldm r3!,{{r5,lr}}
+ ldm r1!,{r4,r12}
+ ldm r3!,{r5,lr}
  sbcs r5,r5,r4
  umull r4,r7,r8,r4
  umaal r4,r7,r2,r5
  sbcs lr,lr,r12
  umull r12,r7,r8,r12
  umaal r12,r7,r2,lr
- stm r0!,{{r4,r12}}
+ stm r0!,{r4,r12}
  sub r6,#2
  cbz r6,1f
  b 0b
 1:
- pop {{r4-r8,pc}}
+ pop {r4-r8,pc}
  .size P256_negate_mod_m_if, .-P256_negate_mod_m_if
 
 
