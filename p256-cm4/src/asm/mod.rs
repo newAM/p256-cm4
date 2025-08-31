@@ -2,6 +2,9 @@
 
 use core::arch::naked_asm;
 
+mod sqrmod;
+pub(crate) use sqrmod::P256_sqrmod;
+
 mod add_sub;
 pub(crate) use add_sub::{P256_addmod, P256_submod};
 
@@ -22,17 +25,6 @@ unsafe extern "C" {
     ///
     /// All other registers are clobbered.
     fn P256_mulmod();
-
-    /// If input is `A*R mod p`, compute `A^2*R mod p`.
-    ///
-    /// # Inputs
-    /// Registers `r0` through `r7` shall contain `A*R mod p`. TODO: figure out ordering. Montgomery?
-    ///
-    /// # Return
-    /// On return `A^2*R mod p` will be contained in `r0` through `r7`.
-    ///
-    /// All other registers are clobbered.
-    fn P256_sqrmod();
 }
 
 /// Code that relies on this static being fewer than 4096 bytes away

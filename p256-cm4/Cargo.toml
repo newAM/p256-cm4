@@ -14,3 +14,10 @@ repository = "https://github.com/newAM/p256-cm4"
 targets = ["thumbv7em-none-eabi"]
 all-features = true
 rustdoc-args = ["--cfg", "docsrs"]
+
+[features]
+use-mul-for-sqr = [ ]
+no-fpu = [ ]
+
+[dependencies]
+cfg-if = { version = "1.0.3", default-features = false }
