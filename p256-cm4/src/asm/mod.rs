@@ -11,6 +11,9 @@ pub(crate) use add_sub::{P256_addmod, P256_submod};
 pub(crate) mod montgomery;
 use montgomery::Montgomery;
 
+mod matrix;
+pub use matrix::P256_matrix_mul_mod_n;
+
 mod mulmod;
 pub(self) use mulmod::P256_mulmod;
 

@@ -15,8 +15,6 @@ unsafe extern "C" {
     fn P256_divsteps2_31(delta: i32, f: u32, g: u32, res_matrix: *mut u32) -> i32;
     // void P256_matrix_mul_fg_9(uint32_t a, uint32_t b, const struct FGInteger fg[2], struct FGInteger *res);
     fn P256_matrix_mul_fg_9(a: u32, b: u32, fg: *const FGInteger, res: *mut FGInteger);
-    // void P256_matrix_mul_mod_n(uint32_t a, uint32_t b, const struct XYInteger xy[2], struct XYInteger *res);
-    fn P256_matrix_mul_mod_n(a: u32, b: u32, xy: *const XYInteger, res: *mut XYInteger);
 
     // void P256_to_montgomery(uint32_t aR[8], const uint32_t a[8]);
     fn P256_to_montgomery(aR: *mut u32, a: *const u32);
@@ -982,18 +980,18 @@ fn mod_n_inv(res: &mut [u32; 8], a: &[u32; 8]) {
         // Iterate the result vector
         // Due to montgomery multiplication inside this function, each step also adds a 2^-32 factor
         unsafe {
-            P256_matrix_mul_mod_n(
+            crate::asm::P256_matrix_mul_mod_n(
                 matrix[0],
                 matrix[1],
-                state[i % 2].xy.as_ptr(),
+                &state[i % 2].xy,
                 &mut state[(i + 1) % 2].xy[0],
             )
         };
         unsafe {
-            P256_matrix_mul_mod_n(
+            crate::asm::P256_matrix_mul_mod_n(
                 matrix[2],
                 matrix[3],
-                state[i % 2].xy.as_ptr(),
+                &state[i % 2].xy,
                 &mut state[(i + 1) % 2].xy[1],
             )
         };
