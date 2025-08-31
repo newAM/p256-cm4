@@ -2,7 +2,7 @@
 #![allow(clippy::missing_safety_doc)]
 
 #[cfg(target_arch = "arm")]
-core::arch::global_asm!(include_str!("./asm.s"));
+core::arch::global_asm!(include_str!("./asm.s"), options(raw));
 
 unsafe extern "C" {
     // int P256_divsteps2_31(int delta, uint32_t f, uint32_t g, uint32_t res_matrix[4]);
