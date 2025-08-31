@@ -1,7 +1,7 @@
 #![no_std]
 #![allow(clippy::missing_safety_doc)]
 
-use crate::asm::{P256_point_is_on_curve, P256_verify_last_step};
+use crate::asm::{P256_decompress_point, P256_point_is_on_curve, P256_verify_last_step};
 
 #[cfg(target_arch = "arm")]
 core::arch::global_asm!(include_str!("./asm.s"), options(raw));
@@ -36,8 +36,6 @@ unsafe extern "C" {
         affine_mont_y: *mut u32,
         jacobian_mont: *const [u32; 8],
     );
-    // bool P256_decompress_point(uint32_t y[8], const uint32_t x[8], uint32_t y_parity);
-    fn P256_decompress_point(y: *mut u32, x: *const u32, y_parity: u32) -> bool;
 
     // void P256_double_j(uint32_t jacobian_point_out[3][8], const uint32_t jacobian_point_in[3][8]);
     fn P256_double_j(jacobian_point_out: *mut [u32; 8], jacobian_point_in: *const [u32; 8]);
@@ -249,7 +247,13 @@ pub fn octet_string_to_point(x: &mut [u32; 8], y: &mut [u32; 8], input: &[u8]) -
             unsafe { P256_to_montgomery(y_mont.as_mut_ptr(), y.as_ptr()) };
             unsafe { P256_point_is_on_curve(&raw const x_mont as _, &raw const y_mont as _) }
         } else if (input[0] >> 1) == 1 && input.len() == 33 {
-            unsafe { P256_decompress_point(y.as_mut_ptr(), x.as_ptr(), u32::from(input[0] & 1)) }
+            unsafe {
+                P256_decompress_point(
+                    &raw mut *y as _,
+                    &raw const *x as _,
+                    u32::from(input[0] & 1),
+                )
+            }
         } else {
             false
         }

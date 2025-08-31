@@ -33,6 +33,19 @@ pub(crate) static P256_B: [u32; 8] = [
     0x29c4bddf, 0xd89cdf62, 0x78843090, 0xacf005cd, 0xf7212ed6, 0xe5a220ab, 0x04874834, 0xdc30061d,
 ];
 
+/// Code that relies on this static being fewer than 4096 bytes away
+/// must be in the same `.p256-cortex-m4` section.
+#[unsafe(link_section = ".p256-cortex-m4")]
+pub(crate) static P256_PRIME: [u32; 8] =
+    [0xffffffff, 0xffffffff, 0xffffffff, 0, 0, 0, 1, 0xffffffff];
+
+// TODO: make this `extern "custom"` once that is stabilized (https://github.com/rust-lang/rust/issues/140829)
+unsafe extern "C" {
+    fn P256_negate_mod_m_if();
+
+    fn P256_modinv_sqrt();
+}
+
 /// Check if a point `xy` is on the `p256` curve.
 ///
 /// # Inputs
@@ -212,5 +225,99 @@ pub unsafe extern "C" fn P256_sqrmod_many_and_mulmod() {
         ",
         P256_sqrmod_many = sym P256_sqrmod_many,
         P256_mulmod = sym P256_mulmod,
+    )
+}
+
+#[unsafe(no_mangle)]
+#[unsafe(link_section = ".p256-cortex-m4")]
+#[unsafe(naked)]
+pub unsafe extern "C" fn P256_decompress_point(
+    y: *const Montgomery,
+    x: *const Montgomery,
+    parity: u32,
+) -> bool {
+    naked_asm!(
+        "
+            push {{r0, r2, r4-r11, lr}}
+            // frame push {{r0, r2, r4-r11, lr}}
+            // frame address sp,44
+            sub sp, #32
+            // frame address sp, 76
+
+            mov r0,sp
+            bl {P256_to_montgomery}
+            ldm sp, {{r0-r7}}
+
+            bl {P256_sqrmod}
+            push {{r0-r7}}
+
+            mov r1, sp
+            adr r2, {P256_B}
+            bl {P256_submod}
+            stm sp, {{r0-r7}}
+            // frame address sp, 108
+
+            add r1, sp, #32
+            mov r2, sp
+            bl {P256_mulmod}
+            stm sp, {{r0-r7}}
+
+            mov r1, sp
+            adr r2, {P256_B}
+            bl {P256_addmod}
+            stm sp, {{r0-r7}}
+
+            mov r8, #1
+            bl {P256_modinv_sqrt}
+            add r8, sp, #32
+            stm r8, {{r0-r7}}
+
+            bl {P256_sqrmod}
+
+            pop {{r8-r11}}
+            // frame address sp, 92
+            eors r8, r0
+            ittt eq
+            eorseq r9, r1
+            eorseq r10, r2
+            eorseq r11, r3
+            pop {{r8-r11}}
+            // frame address sp, 76
+            itttt eq
+            eorseq r8, r4
+            eorseq r9, r5
+            eorseq r10, r6
+            eorseq r11, r7
+            it ne
+            movne r0, #0
+            bne 0f
+
+            mov r0, sp
+            mov r1, sp
+            bl {P256_from_montgomery}
+
+            ldr r3, [sp]
+            ldrd r0, r1, [sp, #32]
+            and r2, r3, #1
+            eors r2, r1
+            mov r1, sp
+            adr r3, {P256_PRIME}
+            bl {P256_negate_mod_m_if}
+            movs r0, #1
+        0:
+            add sp, #32 + 8
+            // frame address sp, 36
+            pop {{r4-r11, pc}}
+        ",
+        P256_to_montgomery = sym crate::P256_to_montgomery,
+        P256_from_montgomery = sym crate::P256_from_montgomery,
+        P256_sqrmod = sym P256_sqrmod,
+        P256_mulmod = sym P256_mulmod,
+        P256_submod = sym P256_submod,
+        P256_addmod = sym P256_addmod,
+        P256_negate_mod_m_if = sym P256_negate_mod_m_if,
+        P256_modinv_sqrt = sym P256_modinv_sqrt,
+        P256_B = sym P256_B,
+        P256_PRIME = sym P256_PRIME,
     )
 }
