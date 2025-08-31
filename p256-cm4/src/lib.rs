@@ -1,7 +1,7 @@
 #![no_std]
 #![allow(clippy::missing_safety_doc)]
 
-use crate::asm::P256_point_is_on_curve;
+use crate::asm::{P256_point_is_on_curve, P256_verify_last_step};
 
 #[cfg(target_arch = "arm")]
 core::arch::global_asm!(include_str!("./asm.s"), options(raw));
@@ -48,8 +48,6 @@ unsafe extern "C" {
         is_sub: bool,
         p2_is_affine: bool,
     );
-    // bool P256_verify_last_step(const uint32_t r[8], const uint32_t jacobian_point[3][8]);
-    fn P256_verify_last_step(r: *const u32, jacobian_point: *const [u32; 8]) -> bool;
 
     // void P256_negate_mod_p_if(uint32_t out[8], const uint32_t in[8], uint32_t should_negate);
     fn P256_negate_mod_p_if(out: *mut u32, inn: *const u32, should_negate: u32);
@@ -58,8 +56,6 @@ unsafe extern "C" {
 
     fn P256_check_range_n(a: &[u32; 8]) -> bool;
     fn P256_check_range_p(a: &[u32; 8]) -> bool;
-
-    static P256_order: [u32; 9];
 }
 
 const ONE_MONTGOMERY: [u32; 8] = [1, 0, 0, 0xffffffff, 0xffffffff, 0xffffffff, 0xfffffffe, 0];
@@ -889,7 +885,7 @@ pub fn verify(
             }
         });
 
-    unsafe { P256_verify_last_step(r.as_ptr(), cp.as_ptr()) }
+    unsafe { P256_verify_last_step(&raw const *r, &raw const cp as _) }
 }
 
 #[repr(C)]
@@ -936,7 +932,7 @@ fn mod_n_inv(res: &mut [u32; 8], a: &[u32; 8]) {
     state[0].fg[0].flip_sign = 0; // non-negative f
     state[0].fg[0]
         .signed_value
-        .copy_from_slice(unsafe { &P256_order }); // f
+        .copy_from_slice(&asm::P256_ORDER); // f
     state[0].fg[1].flip_sign = 0; // non-negative g
     state[0].fg[1].signed_value[..8].copy_from_slice(a); // g
     state[0].fg[1].signed_value[8] = 0; // upper bits of g are 0
