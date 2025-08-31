@@ -14,6 +14,18 @@ use montgomery::Montgomery;
 mod mulmod;
 pub(self) use mulmod::P256_mulmod;
 
+mod verify;
+pub use verify::P256_verify_last_step;
+
+/// The order of the P256 curve.
+///
+/// Code that relies on this static being fewer than 4096 bytes away
+/// must be in the same `.p256-cortex-m4` section.
+#[unsafe(link_section = ".p256-cortex-m4")]
+pub(crate) static P256_ORDER: [u32; 9] = [
+    0xFC632551, 0xF3B9CAC2, 0xA7179E84, 0xBCE6FAAD, 0xFFFFFFFF, 0xFFFFFFFF, 0, 0xFFFFFFFF, 0,
+];
+
 /// Code that relies on this static being fewer than 4096 bytes away
 /// must be in the same `.p256-cortex-m4` section.
 #[unsafe(link_section = ".p256-cortex-m4")]
