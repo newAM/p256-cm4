@@ -11,21 +11,8 @@ pub(crate) use add_sub::{P256_addmod, P256_submod};
 pub(crate) mod montgomery;
 use montgomery::Montgomery;
 
-// TODO: make this `extern "custom"` once that is stabilized (https://github.com/rust-lang/rust/issues/140829)
-unsafe extern "C" {
-    /// For inputs `A*R mod p` and `B*R mod p`, compute `A*B*R mod p`.
-    ///
-    /// # Inputs
-    /// Register `r0` shall contain a valid `*const [u32; 8]`. TODO: figure out ordering. Montgomery?
-    ///
-    /// Register `r1` shall contain a valid `*const [u32; 8]`. TODO: figure out ordering. Montgomery?
-    ///
-    /// # Return
-    /// On return `r0` through `r7` contains `A*B*R mod p`.
-    ///
-    /// All other registers are clobbered.
-    fn P256_mulmod();
-}
+mod mulmod;
+pub(self) use mulmod::P256_mulmod;
 
 /// Code that relies on this static being fewer than 4096 bytes away
 /// must be in the same `.p256-cortex-m4` section.
