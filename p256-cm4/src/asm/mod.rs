@@ -9,7 +9,7 @@ mod add_sub;
 pub(crate) use add_sub::{P256_addmod, P256_submod};
 
 pub(crate) mod montgomery;
-pub use montgomery::{Montgomery, P256_to_montgomery};
+pub use montgomery::{Montgomery, P256_from_montgomery, P256_to_montgomery};
 
 mod matrix;
 pub use matrix::P256_matrix_mul_mod_n;
@@ -311,7 +311,7 @@ pub unsafe extern "C" fn P256_decompress_point(
             pop {{r4-r11, pc}}
         ",
         P256_to_montgomery = sym P256_to_montgomery,
-        P256_from_montgomery = sym crate::P256_from_montgomery,
+        P256_from_montgomery = sym P256_from_montgomery,
         P256_sqrmod = sym P256_sqrmod,
         P256_mulmod = sym P256_mulmod,
         P256_submod = sym P256_submod,
