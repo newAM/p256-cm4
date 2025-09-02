@@ -229,40 +229,6 @@ P256_times2:
  bx lr
  .size P256_times2, .-P256_times2
 
-
-
- .align 2
-
-R2_mod_p:
- .word 3
- .word 0
- .word 0xffffffff
- .word 0xfffffffb
- .word 0xfffffffe
- .word 0xffffffff
- .word 0xfffffffd
- .word 4
-
-
-
- .type P256_to_montgomery, %function
-P256_to_montgomery:
- .global P256_to_montgomery
- push {r0,r4-r11,lr}
-
-
- adr r2,R2_mod_p
- bl P256_mulmod
- pop {r8}
-
- stm r8,{r0-r7}
- pop {r4-r11,pc}
- .size P256_to_montgomery, .-P256_to_montgomery
-
-
-
-
-
  .type P256_from_montgomery, %function
 P256_from_montgomery:
  .global P256_from_montgomery

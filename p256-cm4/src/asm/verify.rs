@@ -132,7 +132,7 @@ pub unsafe extern "C" fn P256_verify_last_step(
         ",
         P256_mulmod = sym super::P256_mulmod,
         P256_sqrmod = sym super::P256_sqrmod,
-        P256_to_montgomery = sym crate::P256_to_montgomery,
+        P256_to_montgomery = sym super::P256_to_montgomery,
         P256_order = sym super::P256_ORDER,
     )
 }

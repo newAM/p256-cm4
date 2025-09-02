@@ -1,7 +1,9 @@
 #![no_std]
 #![allow(clippy::missing_safety_doc)]
 
-use crate::asm::{P256_decompress_point, P256_point_is_on_curve, P256_verify_last_step};
+use crate::asm::{
+    P256_decompress_point, P256_point_is_on_curve, P256_to_montgomery, P256_verify_last_step,
+};
 
 #[cfg(target_arch = "arm")]
 core::arch::global_asm!(include_str!("./asm.s"), options(raw));
@@ -16,8 +18,6 @@ unsafe extern "C" {
     // void P256_matrix_mul_fg_9(uint32_t a, uint32_t b, const struct FGInteger fg[2], struct FGInteger *res);
     fn P256_matrix_mul_fg_9(a: u32, b: u32, fg: *const FGInteger, res: *mut FGInteger);
 
-    // void P256_to_montgomery(uint32_t aR[8], const uint32_t a[8]);
-    fn P256_to_montgomery(aR: *mut u32, a: *const u32);
     // void P256_from_montgomery(uint32_t a[8], const uint32_t aR[8]);
     fn P256_from_montgomery(a: *mut u32, aR: *const u32);
 
@@ -238,11 +238,12 @@ pub fn octet_string_to_point(x: &mut [u32; 8], y: &mut [u32; 8], input: &[u8]) -
             if (input[0] >> 1) == 3 && u32::from(input[0] & 1) != (y[0] & 1) {
                 return false;
             }
+
             let mut x_mont: [u32; 8] = [0; 8];
             let mut y_mont: [u32; 8] = [0; 8];
 
-            unsafe { P256_to_montgomery(x_mont.as_mut_ptr(), x.as_ptr()) };
-            unsafe { P256_to_montgomery(y_mont.as_mut_ptr(), y.as_ptr()) };
+            unsafe { P256_to_montgomery(&raw mut x_mont as _, x) };
+            unsafe { P256_to_montgomery(&raw mut y_mont as _, y) };
             unsafe { P256_point_is_on_curve(&raw const x_mont as _, &raw const y_mont as _) }
         } else if (input[0] >> 1) == 1 && input.len() == 33 {
             unsafe {
@@ -356,8 +357,8 @@ fn scalarmult_generic_no_scalar_check(
     if unsafe { !P256_check_range_p(in_x) || !P256_check_range_p(in_y) } {
         false
     } else {
-        unsafe { P256_to_montgomery(output_mont_x.as_mut_ptr(), in_x.as_ptr()) };
-        unsafe { P256_to_montgomery(output_mont_y.as_mut_ptr(), in_y.as_ptr()) };
+        unsafe { P256_to_montgomery(&raw mut *output_mont_x as _, in_x) };
+        unsafe { P256_to_montgomery(&raw mut *output_mont_y as _, in_y) };
 
         if unsafe {
             !P256_point_is_on_curve(
@@ -792,8 +793,8 @@ pub fn verify(
 
     let mut pk_table: [[[u32; 8]; 3]; 8] = [[[0; 8]; 3]; 8];
     unsafe {
-        P256_to_montgomery(pk_table[0][0].as_mut_ptr(), public_key_x.as_ptr());
-        P256_to_montgomery(pk_table[0][1].as_mut_ptr(), public_key_y.as_ptr());
+        P256_to_montgomery(&raw mut pk_table[0][0] as _, public_key_x);
+        P256_to_montgomery(&raw mut pk_table[0][1] as _, public_key_y);
     }
     pk_table[0][2].copy_from_slice(&ONE_MONTGOMERY);
 
