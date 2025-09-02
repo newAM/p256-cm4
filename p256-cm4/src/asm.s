@@ -229,38 +229,6 @@ P256_times2:
  bx lr
  .size P256_times2, .-P256_times2
 
- .type P256_from_montgomery, %function
-P256_from_montgomery:
- .global P256_from_montgomery
- push {r0,r4-r11,lr}
-
-
- movs r2,#0
- movs r3,#0
- push {r2-r3}
-
- push {r2-r3}
-
- push {r2-r3}
-
- movs r2,#1
- push {r2-r3}
-
- mov r2,sp
- bl P256_mulmod
- add sp,#32
-
- pop {r8}
-
- stm r8,{r0-r7}
- pop {r4-r11,pc}
- .size P256_from_montgomery, .-P256_from_montgomery
-
-
-
-
-
-
  .type P256_check_range_p, %function
 P256_check_range_p:
  .global P256_check_range_p

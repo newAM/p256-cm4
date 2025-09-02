@@ -2,7 +2,8 @@
 #![allow(clippy::missing_safety_doc)]
 
 use crate::asm::{
-    P256_decompress_point, P256_point_is_on_curve, P256_to_montgomery, P256_verify_last_step,
+    P256_decompress_point, P256_from_montgomery, P256_point_is_on_curve, P256_to_montgomery,
+    P256_verify_last_step,
 };
 
 #[cfg(target_arch = "arm")]
@@ -17,9 +18,6 @@ unsafe extern "C" {
     fn P256_divsteps2_31(delta: i32, f: u32, g: u32, res_matrix: *mut u32) -> i32;
     // void P256_matrix_mul_fg_9(uint32_t a, uint32_t b, const struct FGInteger fg[2], struct FGInteger *res);
     fn P256_matrix_mul_fg_9(a: u32, b: u32, fg: *const FGInteger, res: *mut FGInteger);
-
-    // void P256_from_montgomery(uint32_t a[8], const uint32_t aR[8]);
-    fn P256_from_montgomery(a: *mut u32, aR: *const u32);
 
     // void P256_mul_mod_n(uint32_t res[8], const uint32_t a[8], const uint32_t b[8]);
     fn P256_mul_mod_n(res: *mut u32, a: *const u32, b: *const u32);
@@ -395,8 +393,8 @@ pub fn scalarmult_generic(
     } {
         false
     } else {
-        unsafe { P256_from_montgomery(result_x.as_mut_ptr(), result_x.as_ptr()) };
-        unsafe { P256_from_montgomery(result_y.as_mut_ptr(), result_y.as_ptr()) };
+        unsafe { P256_from_montgomery(result_x, &raw const *result_x as _) };
+        unsafe { P256_from_montgomery(result_y, &raw const *result_y as _) };
         true
     }
 }
@@ -428,7 +426,7 @@ pub fn ecdh_calc_shared_secret(
     ) {
         false
     } else {
-        unsafe { P256_from_montgomery(result_x.as_mut_ptr(), result_x.as_ptr()) };
+        unsafe { P256_from_montgomery(&raw mut result_x as _, &raw const result_x as _) };
         convert_endianness(shared_secret, u32x8_to_u8x32(&result_x));
         true
     }
@@ -569,8 +567,8 @@ pub fn scalarmult_base(
         false
     } else {
         scalarmult_fixed_base(result_x, result_y, scalar);
-        unsafe { P256_from_montgomery(result_x.as_mut_ptr(), result_x.as_ptr()) };
-        unsafe { P256_from_montgomery(result_y.as_mut_ptr(), result_y.as_ptr()) };
+        unsafe { P256_from_montgomery(result_x, &raw const *result_x as _) };
+        unsafe { P256_from_montgomery(result_y, &raw const *result_y as _) };
         true
     }
 }
@@ -649,7 +647,7 @@ pub fn sign_step1(result: &mut SignPrecomp, k: &[u32; 8]) -> bool {
         let mut output_y: [u32; 8] = [0; 8];
         scalarmult_fixed_base(&mut output_x, &mut output_y, k);
         mod_n_inv(&mut result.k_inv, k);
-        unsafe { P256_from_montgomery(result.r.as_mut_ptr(), output_x.as_ptr()) };
+        unsafe { P256_from_montgomery(&raw mut result.r, &raw const output_x as _) };
         unsafe { P256_reduce_mod_n_32bytes(result.r.as_mut_ptr(), result.r.as_ptr()) };
 
         let r_sum: u32 = (0..8).fold(0, |r_sum, i| r_sum | result.r[i]);
