@@ -44,8 +44,6 @@ pub(crate) static P256_PRIME: [u32; 8] =
 
 // TODO: make this `extern "custom"` once that is stabilized (https://github.com/rust-lang/rust/issues/140829)
 unsafe extern "C" {
-    fn P256_negate_mod_m_if();
-
     fn P256_modinv_sqrt();
 }
 
@@ -322,5 +320,52 @@ pub unsafe extern "C" fn P256_decompress_point(
         P256_modinv_sqrt = sym P256_modinv_sqrt,
         P256_B = sym P256_B,
         P256_PRIME = sym P256_PRIME,
+    )
+}
+
+/// Given inputs `a`, `should_negate` and `m`:
+/// 1. If `should_negate == 1`, compute `m - a`.
+/// 2. Else, copy `a`.
+///
+/// # Inputs
+/// `r0` shall contain a valid `*mut [u32; 8]`.
+///
+/// `r1` shall contain `a`, a valid `*const [u32; 8]`, where `1 <= a <= m - 1`.
+///
+/// `r2` shall contain `should_negate`, a `u32` that is either 1 or 0.
+///
+/// `r3` shall contain `m`, a valid `*const [u32; 8]`.
+///
+/// # Return
+/// On return, the dereference of the input value of `r0` shall contain the result of the computation.
+///
+/// > **Note**: `r0` will be overriden during the execution of this function (it is callee-saved).
+#[unsafe(no_mangle)]
+#[unsafe(naked)]
+pub unsafe extern "C" fn P256_negate_mod_m_if() {
+    naked_asm!(
+        "
+                push {r4-r8, lr}
+                // frame push {r4-r8,lr}
+                rsb r8, r2, #1
+                movs r6, #8
+                subs r7, r7 // set r7=0 and C=1
+            0:
+                ldm r1!, {r4, r12}
+                ldm r3!, {r5, lr}
+                sbcs r5, r5, r4
+                umull r4, r7, r8, r4
+                umaal r4, r7, r2, r5
+                sbcs lr, lr, r12
+                umull r12, r7, r8, r12
+                umaal r12, r7, r2, lr
+                stm r0!, {r4,r12}
+                sub r6, #2
+                cbz r6, 1f
+                b 0b
+            1:
+                pop {r4-r8, pc}
+        ",
+        options(raw)
     )
 }

@@ -1304,33 +1304,6 @@ P256_add_sub_j:
  pop {r4-r11,pc}
  .size P256_add_sub_j, .-P256_add_sub_j
 
-# 3252 "P256-Cortex-M4/p256-cortex-m4-asm-gcc.S"
- .type P256_negate_mod_m_if, %function
-P256_negate_mod_m_if:
- push {r4-r8,lr}
-
- rsb r8,r2,#1
- movs r6,#8
- subs r7,r7
-0:
- ldm r1!,{r4,r12}
- ldm r3!,{r5,lr}
- sbcs r5,r5,r4
- umull r4,r7,r8,r4
- umaal r4,r7,r2,r5
- sbcs lr,lr,r12
- umull r12,r7,r8,r12
- umaal r12,r7,r2,lr
- stm r0!,{r4,r12}
- sub r6,#2
- cbz r6,1f
- b 0b
-1:
- pop {r4-r8,pc}
- .size P256_negate_mod_m_if, .-P256_negate_mod_m_if
-
-
-
  .type P256_negate_mod_n_if, %function
 P256_negate_mod_n_if:
  .global P256_negate_mod_n_if
