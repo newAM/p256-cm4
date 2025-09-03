@@ -127,3 +127,49 @@ pub unsafe extern "C" fn add_sub_helper() {
         options(raw)
     )
 }
+
+/// Given a number `a`, validate that it is in the range `[1, n-1]` where `n` is the P256 order.
+///
+/// # Inputs
+/// `r0` shall contain `a`, a valid `*const [u32; 8]`.
+///
+/// # Return
+/// On return, `r0` will contain `1` if `a` was in the range, and `0` otherwise.
+#[unsafe(naked)]
+#[unsafe(no_mangle)]
+#[unsafe(link_section = ".p256-cortex-m4")]
+pub unsafe extern "C" fn P256_check_range_n(a: *const [u32; 8]) -> bool {
+    naked_asm!(
+        "
+            push {{r4-r11, lr}}
+            // frame push {{r4-r11, lr}}
+            ldm r0, {{r1-r8}}
+            orrs r0, r1, r2
+            orrs r0, r3
+            orrs r0, r4
+            orrs r0, r5
+            orrs r0, r6
+            orrs r0, r7
+            orrs r0, r8
+            beq 0f
+
+            adr r0, {P256_ORDER}
+            ldm r0!, {{r9-r12}}
+            subs r1, r9
+            sbcs r2, r2, r10
+            sbcs r3, r3, r11
+            sbcs r4, r4, r12
+            ldm r0,{{r0-r3}}
+            sbcs r5, r5, r0
+            sbcs r6, r6, r1
+            sbcs r7, r7, r2
+            sbcs r8, r8, r3
+
+            sbcs r0, r0, r0
+            lsrs r0,#31
+        0:
+            pop {{r4-r11, pc}}
+        ",
+        P256_ORDER = sym super::P256_ORDER
+    )
+}

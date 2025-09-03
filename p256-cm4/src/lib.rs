@@ -2,8 +2,8 @@
 #![allow(clippy::missing_safety_doc)]
 
 use crate::asm::{
-    P256_decompress_point, P256_double_j, P256_from_montgomery, P256_point_is_on_curve,
-    P256_to_montgomery, P256_verify_last_step,
+    P256_check_range_n, P256_decompress_point, P256_double_j, P256_from_montgomery,
+    P256_point_is_on_curve, P256_to_montgomery, P256_verify_last_step,
     jacobian::{P256_add_sub_j, P256_jacobian_to_affine},
 };
 
@@ -32,7 +32,6 @@ unsafe extern "C" {
     // void P256_negate_mod_n_if(uint32_t out[8], const uint32_t in[8], uint32_t should_negate);
     fn P256_negate_mod_n_if(out: *mut u32, inn: *const u32, should_negate: u32);
 
-    fn P256_check_range_n(a: &[u32; 8]) -> bool;
     fn P256_check_range_p(a: &[u32; 8]) -> bool;
 }
 
