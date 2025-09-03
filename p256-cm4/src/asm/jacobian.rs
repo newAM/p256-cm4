@@ -518,3 +518,70 @@ pub unsafe extern "C" fn P256_add_sub_j(
         P256_double_j = sym P256_double_j,
     )
 }
+
+/// Given jacobian (with integers in montgomery form) `a`, calculate the affine `x` and `y` points.
+///
+/// # Inputs
+/// `r0` shall contain `x`, a valid [`*mut Montomery`](super::Montgomery).
+///
+/// `r1` shall contain `y`, a valid [`*mut Montomery`](super::Montgomery).
+///
+/// `r2` shall contain `a`, a valid [`*const [Montgomery; 3]`](super::Montgomery).
+///
+/// # Return
+/// On return, the locations pointed to by the input `r0` and `r0` will contain the results of the operation.
+///
+/// > **Note**: `r0` will be overriden during the execution of this function (it is callee-saved).
+#[unsafe(naked)]
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn P256_jacobian_to_affine(
+    x: *mut Montgomery,
+    y: *mut Montgomery,
+    a: *const [Montgomery; 3],
+) {
+    naked_asm!(
+        "
+            push {{r0, r1, r2, r4-r11, lr}}
+            // frame push {{r0, r1, r2, r4-r11,lr}}
+            // frame address sp,48
+
+            adds r2, #64
+            ldm r2, {{r0-r7}}
+            mov r8, #0
+            bl {P256_modinv_sqrt}
+            push {{r0-r7}}
+            // frame address sp,80
+
+            bl {P256_sqrmod}
+            push {{r0-r7}}
+            // frame address sp,112
+
+            add r1, sp,# 32
+            mov r2, sp
+            bl {P256_mulmod}
+            add r8, sp, #32
+            stm r8, {{r0-r7}}
+
+            mov r1,sp
+            ldr r2, [sp, #72]
+            bl {P256_mulmod}
+            ldr r8, [sp,#64]
+            stm r8, {{r0-r7}}
+
+            ldr r2, [sp,#72]
+            add r1, sp, #32
+            adds r2, r2, #32
+            bl {P256_mulmod}
+            ldr r8, [sp,#68]
+            stm r8, {{r0-r7}}
+
+            add sp, #76
+            // frame address sp,36
+
+            pop {{r4-r11, pc}}
+        ",
+        P256_modinv_sqrt = sym super::P256_modinv_sqrt,
+        P256_sqrmod = sym super::P256_sqrmod,
+        P256_mulmod = sym super::P256_mulmod,
+    )
+}

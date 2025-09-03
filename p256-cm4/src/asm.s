@@ -547,49 +547,6 @@ P256_p:
  .word 1
  .word 0xffffffff
 
- .type P256_jacobian_to_affine, %function
-P256_jacobian_to_affine:
- .global P256_jacobian_to_affine
- push {r0,r1,r2,r4-r11,lr}
-
-
-
- adds r2,#64
- ldm r2,{r0-r7}
- mov r8,#0
- bl P256_modinv_sqrt
- push {r0-r7}
-
-
- bl P256_sqrmod
- push {r0-r7}
-
-
- add r1,sp,#32
- mov r2,sp
- bl P256_mulmod
- add r8,sp,#32
- stm r8,{r0-r7}
-
- mov r1,sp
- ldr r2,[sp,#72]
- bl P256_mulmod
- ldr r8,[sp,#64]
- stm r8,{r0-r7}
-
- ldr r2,[sp,#72]
- add r1,sp,#32
- adds r2,r2,#32
- bl P256_mulmod
- ldr r8,[sp,#68]
- stm r8,{r0-r7}
-
- add sp,#76
-
-
- pop {r4-r11,pc}
- .size P256_jacobian_to_affine, .-P256_jacobian_to_affine
-
  .type P256_negate_mod_n_if, %function
 P256_negate_mod_n_if:
  .global P256_negate_mod_n_if

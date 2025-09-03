@@ -3,7 +3,8 @@
 
 use crate::asm::{
     P256_decompress_point, P256_double_j, P256_from_montgomery, P256_point_is_on_curve,
-    P256_to_montgomery, P256_verify_last_step, jacobian::P256_add_sub_j,
+    P256_to_montgomery, P256_verify_last_step,
+    jacobian::{P256_add_sub_j, P256_jacobian_to_affine},
 };
 
 #[cfg(target_arch = "arm")]
@@ -25,13 +26,6 @@ unsafe extern "C" {
     fn P256_add_mod_n(res: *mut u32, a: *const u32, b: *const u32);
     // void P256_reduce_mod_n_32bytes(uint32_t res[8], const uint32_t a[8]);
     fn P256_reduce_mod_n_32bytes(res: *mut u32, a: *const u32);
-
-    // void P256_jacobian_to_affine(uint32_t affine_mont_x[8], uint32_t affine_mont_y[8], const uint32_t jacobian_mont[3][8]);
-    fn P256_jacobian_to_affine(
-        affine_mont_x: *mut u32,
-        affine_mont_y: *mut u32,
-        jacobian_mont: *const [u32; 8],
-    );
 
     // void P256_negate_mod_p_if(uint32_t out[8], const uint32_t in[8], uint32_t should_negate);
     fn P256_negate_mod_p_if(out: *mut u32, inn: *const u32, should_negate: u32);
@@ -330,9 +324,9 @@ fn scalarmult_variable_base(
     });
     unsafe {
         P256_jacobian_to_affine(
-            output_mont_x.as_mut_ptr(),
-            output_mont_y.as_mut_ptr(),
-            current_point.as_ptr(),
+            &raw mut *output_mont_x as _,
+            &raw mut *output_mont_y as _,
+            &raw const current_point as _,
         )
     };
 
@@ -538,9 +532,9 @@ fn scalarmult_fixed_base(
 
     unsafe {
         P256_jacobian_to_affine(
-            output_mont_x.as_mut_ptr(),
-            output_mont_y.as_mut_ptr(),
-            current_point.as_ptr(),
+            &raw mut *output_mont_x as _,
+            &raw mut *output_mont_y as _,
+            &raw const current_point as _,
         )
     };
 
