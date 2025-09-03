@@ -166,6 +166,49 @@ pub unsafe extern "C" fn P256_double_j(
     );
 }
 
-unsafe extern "C" {
-    fn P256_times2();
+/// For input `a`, calculate `a * 2 mod p`, where `p` is the P256 prime.
+///
+/// # Inputs
+/// `r0` through `r7` shall contain `a`, a 256 bit number in little-endian order.
+///
+/// # Outputs
+/// `r0` through `r7` will contain the result of the computation.
+#[unsafe(naked)]
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn P256_times2() {
+    naked_asm!(
+        "
+        	adds r0,r0
+            adcs r1,r1,r1
+            adcs r2,r2,r2
+            adcs r3,r3,r3
+            adcs r4,r4,r4
+            adcs r5,r5,r5
+            adcs r6,r6,r6
+            adcs r7,r7,r7
+            mov r8,#0
+            adcs r8,r8,r8
+
+            subs r0,#0xffffffff
+            sbcs r1,r1,#0xffffffff
+            sbcs r2,r2,#0xffffffff
+            sbcs r3,r3,#0
+            sbcs r4,r4,#0
+            sbcs r5,r5,#0
+            sbcs r6,r6,#1
+            sbcs r7,r7,#0xffffffff
+            sbcs r8,r8,#0
+
+            adds r0,r8
+            adcs r1,r1,r8
+            adcs r2,r2,r8
+            adcs r3,r3,#0
+            adcs r4,r4,#0
+            adcs r5,r5,#0
+            adcs r6,r6,r8, lsr #31
+            adcs r7,r7,r8
+
+            bx lr
+        "
+    )
 }
