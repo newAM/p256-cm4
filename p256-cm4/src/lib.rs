@@ -825,7 +825,6 @@ pub fn verify(
 
     let mut cp: [[u32; 8]; 3] = [[0; 8]; 3];
 
-    #[allow(clippy::comparison_chain)]
     slide_bp
         .iter()
         .rev()
@@ -833,43 +832,34 @@ pub fn verify(
         .for_each(|(&bp, &pk)| {
             unsafe { P256_double_j(&raw mut cp as _, &raw mut cp as _) };
 
-            if bp > 0 {
-                unsafe {
-                    P256_add_sub_j(
-                        &raw mut cp as _,
-                        &raw const P256_BASEPOINT_PRECOMP[(bp / 2) as usize] as _,
-                        false,
-                        true,
-                    )
-                };
+            let bp_op = if bp > 0 {
+                Some((bp / 2, false))
             } else if bp < 0 {
+                Some((-bp / 2, true))
+            } else {
+                None
+            };
+
+            if let Some((precomp, is_sub)) = bp_op {
+                let precomp = &raw const P256_BASEPOINT_PRECOMP[precomp as usize];
                 unsafe {
-                    P256_add_sub_j(
-                        &raw mut cp as _,
-                        &raw const P256_BASEPOINT_PRECOMP[((-bp) / 2) as usize] as _,
-                        true,
-                        true,
-                    )
-                };
+                    P256_add_sub_j(&raw mut cp as _, precomp as _, is_sub, true);
+                }
             }
-            if pk > 0 {
-                unsafe {
-                    P256_add_sub_j(
-                        &raw mut cp as _,
-                        &raw const pk_table[(pk / 2) as usize] as _,
-                        false,
-                        false,
-                    )
-                };
+
+            let pk_op = if pk > 0 {
+                Some((pk / 2, false))
             } else if pk < 0 {
+                Some((-pk / 2, true))
+            } else {
+                None
+            };
+
+            if let Some((pk_idx, is_sub)) = pk_op {
+                let pk_table = &raw const pk_table[pk_idx as usize];
                 unsafe {
-                    P256_add_sub_j(
-                        &raw mut cp as _,
-                        &raw const pk_table[((-pk) / 2) as usize] as _,
-                        true,
-                        false,
-                    )
-                };
+                    P256_add_sub_j(&raw mut cp as _, pk_table as _, is_sub, false);
+                }
             }
         });
 
