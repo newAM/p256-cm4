@@ -3,7 +3,7 @@
 
 use crate::asm::{
     P256_decompress_point, P256_double_j, P256_from_montgomery, P256_point_is_on_curve,
-    P256_to_montgomery, P256_verify_last_step,
+    P256_to_montgomery, P256_verify_last_step, jacobian::P256_add_sub_j,
 };
 
 #[cfg(target_arch = "arm")]
@@ -33,14 +33,6 @@ unsafe extern "C" {
         jacobian_mont: *const [u32; 8],
     );
 
-    // void P256_add_sub_j(uint32_t jacobian_point1[3][8], const uint32_t (*point2)[8], bool is_sub, bool p2_is_affine);
-    fn P256_add_sub_j(
-        jacobian_point1: *mut [u32; 8],
-        point2: *const [u32; 8],
-        is_sub: bool,
-        p2_is_affine: bool,
-    );
-
     // void P256_negate_mod_p_if(uint32_t out[8], const uint32_t in[8], uint32_t should_negate);
     fn P256_negate_mod_p_if(out: *mut u32, inn: *const u32, should_negate: u32);
     // void P256_negate_mod_n_if(uint32_t out[8], const uint32_t in[8], uint32_t should_negate);
@@ -54,7 +46,7 @@ const ONE_MONTGOMERY: [u32; 8] = [1, 0, 0, 0xffffffff, 0xffffffff, 0xffffffff, 0
 
 // This table contains 1G, 3G, 5G, ... 15G in affine coordinates in montgomery form
 #[rustfmt::skip]
-const P256_BASEPOINT_PRECOMP: [[[u32; 8]; 2]; 8]= [
+static P256_BASEPOINT_PRECOMP: [[[u32; 8]; 2]; 8]= [
 [[0x18a9143c, 0x79e730d4, 0x5fedb601, 0x75ba95fc, 0x77622510, 0x79fb732b, 0xa53755c6, 0x18905f76],
 [0xce95560a, 0xddf25357, 0xba19e45c, 0x8b4ab8e4, 0xdd21f325, 0xd2e88688, 0x25885d85, 0x8571ff18]],
 [[0x4eebc127, 0xffac3f90, 0x87d81fb, 0xb027f84a, 0x87cbbc98, 0x66ad77dd, 0xb6ff747e, 0x26936a3f],
@@ -289,7 +281,14 @@ fn scalarmult_variable_base(
     unsafe { P256_double_j(&raw mut table[7] as _, &raw const table[0] as _) };
     (1..8).for_each(|i| {
         table.copy_within(7..8, i);
-        unsafe { P256_add_sub_j(table[i].as_mut_ptr(), table[i - 1].as_ptr(), false, false) };
+        unsafe {
+            P256_add_sub_j(
+                &raw mut table[i] as _,
+                &raw const table[i - 1] as _,
+                false,
+                false,
+            )
+        };
     });
 
     // Calculate the result as (((((((((e[63]*G)*2^4)+e[62])*2^4)+e[61])*2^4)...)+e[1])*2^4)+e[0] = (2^252*e[63] + 2^248*e[62] + ... + e[0])*G.
@@ -322,8 +321,8 @@ fn scalarmult_variable_base(
         // attacker could easily test this case anyway.
         unsafe {
             P256_add_sub_j(
-                current_point.as_mut_ptr(),
-                selected_point.as_ptr(),
+                &raw mut current_point as _,
+                &raw const selected_point as _,
                 false,
                 false,
             )
@@ -504,8 +503,8 @@ fn scalarmult_fixed_base(
                 };
                 unsafe {
                     P256_add_sub_j(
-                        current_point.as_mut_ptr(),
-                        selected_point.as_mut_ptr(),
+                        &raw mut current_point as _,
+                        &raw const selected_point as _,
                         false,
                         true,
                     )
@@ -528,8 +527,8 @@ fn scalarmult_fixed_base(
             };
             unsafe {
                 P256_add_sub_j(
-                    current_point.as_mut_ptr(),
-                    selected_point.as_mut_ptr(),
+                    &raw mut current_point as _,
+                    &raw const selected_point as _,
                     false,
                     true,
                 )
@@ -809,8 +808,8 @@ pub fn verify(
         pk_table.copy_within(7..8, i);
         unsafe {
             P256_add_sub_j(
-                pk_table[i].as_mut_ptr(),
-                pk_table[i - 1].as_ptr(),
+                &raw mut pk_table[i] as _,
+                &raw const pk_table[i - 1] as _,
                 false,
                 false,
             )
@@ -847,8 +846,8 @@ pub fn verify(
             if bp > 0 {
                 unsafe {
                     P256_add_sub_j(
-                        cp.as_mut_ptr(),
-                        P256_BASEPOINT_PRECOMP[(bp / 2) as usize].as_ptr(),
+                        &raw mut cp as _,
+                        &raw const P256_BASEPOINT_PRECOMP[(bp / 2) as usize] as _,
                         false,
                         true,
                     )
@@ -856,8 +855,8 @@ pub fn verify(
             } else if bp < 0 {
                 unsafe {
                     P256_add_sub_j(
-                        cp.as_mut_ptr(),
-                        P256_BASEPOINT_PRECOMP[((-bp) / 2) as usize].as_ptr(),
+                        &raw mut cp as _,
+                        &raw const P256_BASEPOINT_PRECOMP[((-bp) / 2) as usize] as _,
                         true,
                         true,
                     )
@@ -866,8 +865,8 @@ pub fn verify(
             if pk > 0 {
                 unsafe {
                     P256_add_sub_j(
-                        cp.as_mut_ptr(),
-                        pk_table[(pk / 2) as usize].as_ptr(),
+                        &raw mut cp as _,
+                        &raw const pk_table[(pk / 2) as usize] as _,
                         false,
                         false,
                     )
@@ -875,8 +874,8 @@ pub fn verify(
             } else if pk < 0 {
                 unsafe {
                     P256_add_sub_j(
-                        cp.as_mut_ptr(),
-                        pk_table[((-pk) / 2) as usize].as_ptr(),
+                        &raw mut cp as _,
+                        &raw const pk_table[((-pk) / 2) as usize] as _,
                         true,
                         false,
                     )

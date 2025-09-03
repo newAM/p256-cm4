@@ -31,7 +31,7 @@ impl Default for Montgomery {
 ///
 /// Register `r1` shall contain a valid `*const [u32; 8]`, pointing to the 256-bit number to be converted.
 ///
-/// The pointers in `r0` and `r1` are allowed to be overlapping.
+/// The pointers in `r0` and `r1` may overlap.
 ///
 /// # Return
 /// On return, the dereference of the input value of `r0` shall contain the result of the computation.
@@ -74,7 +74,7 @@ pub unsafe extern "C" fn P256_to_montgomery(a: *mut Montgomery, aR: *const [u32;
 ///
 ///  `r1` shall contain a valid [`*cont Montgomery`](Montgomery), the number to be converted.
 ///
-/// The pointers in `r0` and `r1` are allowed to be overlapping.
+/// The pointers in `r0` and `r1` may overlap.
 ///
 /// # Return
 /// On return, the dereference of the input value of `r0` shall contain the result of the computation.
