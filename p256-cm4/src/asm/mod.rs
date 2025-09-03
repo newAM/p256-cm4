@@ -11,6 +11,9 @@ pub(crate) use add_sub::{P256_addmod, P256_submod};
 pub(crate) mod montgomery;
 pub use montgomery::{Montgomery, P256_from_montgomery, P256_to_montgomery};
 
+mod sqrt;
+pub(crate) use sqrt::P256_modinv_sqrt;
+
 mod matrix;
 pub use matrix::P256_matrix_mul_mod_n;
 
@@ -41,11 +44,6 @@ pub(crate) static P256_B: [u32; 8] = [
 #[unsafe(link_section = ".p256-cortex-m4")]
 pub(crate) static P256_PRIME: [u32; 8] =
     [0xffffffff, 0xffffffff, 0xffffffff, 0, 0, 0, 1, 0xffffffff];
-
-// TODO: make this `extern "custom"` once that is stabilized (https://github.com/rust-lang/rust/issues/140829)
-unsafe extern "C" {
-    fn P256_modinv_sqrt();
-}
 
 /// Check if a point `xy` is on the `p256` curve.
 ///
