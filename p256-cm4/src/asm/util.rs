@@ -65,3 +65,65 @@ pub unsafe extern "C" fn mul288x288() {
         options(raw)
     )
 }
+
+/// Given jacobian points (with integers in montgomery form) `a`:
+/// 1. If `negate_y == true`, negate `a`
+/// 2. If `set_z_to_one == true`, set the Z coordinate of `a` to 1
+///
+/// # Inputs
+/// `r0` shall contain a valid [`*mut [Montgomery; 3]`](super::Montgomery).
+///
+/// `r1` shall contain `a`, a valid [`*const [Montgomery; 3]`](super::Montgomery).
+///
+/// `r2` shall contain `negate_y`, a boolean.
+///
+/// `r3` shall contain `set_z_to_one`, a boolean.
+///
+/// # Return
+/// On return, the dereference of the input value of `r0` shall contain the result of the operation.
+///
+/// > **Note**: this function clobbers all registers.
+#[unsafe(naked)]
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn add_sub_helper() {
+    naked_asm!(
+        "
+        	push {lr}
+            // frame push {lr}
+            ldm r1!, {r5-r12}
+            stm r0!, {r5-r12}
+            ldm r1!, {r5-r12}
+            cbz r2, 0f
+            // note that Y is never 0 for a valid point
+            mov lr, #0
+            rsbs r4,  r2, #0
+            subs r5,  r4, r5
+            sbcs r6,  r4, r6
+            sbcs r7,  r4, r7
+            sbcs r8,  lr, r8
+            sbcs r9,  lr, r9
+            sbcs r10, lr, r10
+            sbcs r11, r2, r11
+            sbcs r12, r4, r12
+        0:
+            stm r0!, {r5-r12}
+            cbnz r3, 1f
+            ldm r1, {r5-r12}
+            stm r0, {r5-r12}
+            b 2f
+        1:
+            // Set Z3 to 1 in Montgomery form
+            movs r4, #0
+            umull r5, r10, r4, r4
+            mvns r6, r4
+            mvns r7, r4
+            mov r8, #0xffffffff
+            mov r9, #0xfffffffe
+
+            stm r0,{r3-r10}
+        2:
+            pop {pc}
+        ",
+        options(raw)
+    )
+}

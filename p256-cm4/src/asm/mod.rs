@@ -27,6 +27,7 @@ mod verify;
 pub use verify::P256_verify_last_step;
 
 mod util;
+pub use util::add_sub_helper;
 
 /// The order of the P256 curve.
 ///
