@@ -2,8 +2,8 @@
 #![allow(clippy::missing_safety_doc)]
 
 use crate::asm::{
-    P256_decompress_point, P256_from_montgomery, P256_point_is_on_curve, P256_to_montgomery,
-    P256_verify_last_step,
+    P256_decompress_point, P256_double_j, P256_from_montgomery, P256_point_is_on_curve,
+    P256_to_montgomery, P256_verify_last_step,
 };
 
 #[cfg(target_arch = "arm")]
@@ -33,8 +33,6 @@ unsafe extern "C" {
         jacobian_mont: *const [u32; 8],
     );
 
-    // void P256_double_j(uint32_t jacobian_point_out[3][8], const uint32_t jacobian_point_in[3][8]);
-    fn P256_double_j(jacobian_point_out: *mut [u32; 8], jacobian_point_in: *const [u32; 8]);
     // void P256_add_sub_j(uint32_t jacobian_point1[3][8], const uint32_t (*point2)[8], bool is_sub, bool p2_is_affine);
     fn P256_add_sub_j(
         jacobian_point1: *mut [u32; 8],
@@ -288,7 +286,7 @@ fn scalarmult_variable_base(
     table[0][0].copy_from_slice(output_mont_x);
     table[0][1].copy_from_slice(output_mont_y);
     table[0][2].copy_from_slice(&ONE_MONTGOMERY);
-    unsafe { P256_double_j(table[7].as_mut_ptr(), table[0].as_ptr()) };
+    unsafe { P256_double_j(&raw mut table[7] as _, &raw const table[0] as _) };
     (1..8).for_each(|i| {
         table.copy_within(7..8, i);
         unsafe { P256_add_sub_j(table[i].as_mut_ptr(), table[i - 1].as_ptr(), false, false) };
@@ -303,7 +301,7 @@ fn scalarmult_variable_base(
 
     (0..63).rev().for_each(|i| {
         (0..4).for_each(|_| unsafe {
-            P256_double_j(current_point.as_mut_ptr(), current_point.as_ptr())
+            P256_double_j(&raw mut current_point as _, &raw const current_point as _)
         });
 
         let mut selected_point: [[u32; 8]; 3] = [[0; 8]; 3];
@@ -492,7 +490,7 @@ fn scalarmult_fixed_base(
                 current_point[..2].copy_from_slice(&P256_BASEPOINT_PRECOMP2[1][mask as usize]);
                 current_point[2].copy_from_slice(&ONE_MONTGOMERY);
             } else {
-                unsafe { P256_double_j(current_point.as_mut_ptr(), current_point.as_ptr()) };
+                unsafe { P256_double_j(&raw mut current_point as _, &raw mut current_point as _) };
 
                 let sign: u32 = get_bit!(scalar2, i + 3 * 64 + 32 + 1).wrapping_sub(1); // positive: 0, negative: -1
                 mask = (mask ^ sign) & 7;
@@ -806,7 +804,7 @@ pub fn verify(
     }
 
     // Create a table of P, 3P, 5P, ..., 15P, where P is the public key.
-    unsafe { P256_double_j(pk_table[7].as_mut_ptr(), pk_table[0].as_ptr()) };
+    unsafe { P256_double_j(&raw mut pk_table[7] as _, &raw const pk_table[0] as _) };
     (1..8).for_each(|i| {
         pk_table.copy_within(7..8, i);
         unsafe {
@@ -844,7 +842,7 @@ pub fn verify(
         .rev()
         .zip(slide_pk.iter().rev())
         .for_each(|(&bp, &pk)| {
-            unsafe { P256_double_j(cp.as_mut_ptr(), cp.as_ptr()) };
+            unsafe { P256_double_j(&raw mut cp as _, &raw mut cp as _) };
 
             if bp > 0 {
                 unsafe {
