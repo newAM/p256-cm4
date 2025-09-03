@@ -3,7 +3,8 @@
 
 use crate::asm::{
     P256_check_range_n, P256_decompress_point, P256_divsteps2_31, P256_double_j,
-    P256_from_montgomery, P256_point_is_on_curve, P256_to_montgomery, P256_verify_last_step,
+    P256_from_montgomery, P256_matrix_mul_fg_9, P256_point_is_on_curve, P256_to_montgomery,
+    P256_verify_last_step,
     jacobian::{P256_add_sub_j, P256_jacobian_to_affine},
 };
 
@@ -14,9 +15,6 @@ core::arch::global_asm!(include_str!("./asm.s"), options(raw));
 mod asm;
 
 unsafe extern "C" {
-    // void P256_matrix_mul_fg_9(uint32_t a, uint32_t b, const struct FGInteger fg[2], struct FGInteger *res);
-    fn P256_matrix_mul_fg_9(a: u32, b: u32, fg: *const FGInteger, res: *mut FGInteger);
-
     // void P256_mul_mod_n(uint32_t res[8], const uint32_t a[8], const uint32_t b[8]);
     fn P256_mul_mod_n(res: *mut u32, a: *const u32, b: *const u32);
     // void P256_add_mod_n(uint32_t res[8], const uint32_t a[8], const uint32_t b[8]);
@@ -940,7 +938,7 @@ fn mod_n_inv(res: &mut [u32; 8], a: &[u32; 8]) {
             P256_matrix_mul_fg_9(
                 matrix[0],
                 matrix[1],
-                state[i % 2].fg.as_ptr(),
+                &state[i % 2].fg,
                 &mut state[(i + 1) % 2].fg[0],
             )
         };
@@ -948,7 +946,7 @@ fn mod_n_inv(res: &mut [u32; 8], a: &[u32; 8]) {
             P256_matrix_mul_fg_9(
                 matrix[2],
                 matrix[3],
-                state[i % 2].fg.as_ptr(),
+                &state[i % 2].fg,
                 &mut state[(i + 1) % 2].fg[1],
             )
         };

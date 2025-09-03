@@ -1,5 +1,7 @@
 use core::arch::naked_asm;
 
+use crate::FGInteger;
+
 /// The elements of a matrix.
 ///
 /// These values are two's-complement encoded and in the range `[-2^30, 2^31]`.
@@ -285,4 +287,133 @@ pub unsafe extern "C" fn P256_divsteps2_31(delta: i32, f: u32, g: u32, res: *mut
         ",
         options(raw)
     )
+}
+
+/// Given inputs `a`, `b`, `f` and `g`, calculate `a * f + b * g`
+///
+/// # Inputs
+/// `r0` shall contain `a`, a 32 bit unsigned integer.
+///
+/// `r1` shall contain `b`, a 32 bit unsigned integer.
+///
+/// `r2` shall contain `f` and `g`, two 257 bit signed numbers, as a [`*const [FGInteger; 2]`](crate::FGInteger).
+///
+/// `r3` shall contain a valid [`*mut FGInteger`](crate::FGInteger).
+///
+/// # Return
+/// On return, the dereference of the input value of `r3` will contain the result of the operation.
+#[unsafe(naked)]
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn P256_matrix_mul_fg_9(
+    a: u32,
+    b: u32,
+    fg: *const [FGInteger; 2],
+    res: *mut FGInteger,
+) {
+    naked_asm!(
+        "
+            push {r4-r11, lr}
+            // frame push {r4-r11, lr}
+
+            // this function calculates (a * f + b * g) / 2^31, which shall be an integer
+
+            // the range is [-2^30, 2^31], so if negative, the top 2 bits are both 1s
+            // convert to absolute value and sign
+            and r4,  r0, r0, lsl #1
+            asrs r4, r4, #31
+            eors r0, r0, r4
+            subs r0, r0, r4
+
+            and r5,  r1, r1, lsl #1
+            asrs r5, r5, #31
+            eors r1, r1, r5
+            subs r1, r1, r5
+
+            ldm r2!, {r6} // f sign
+            ldr r7, [r2, #36] // g sign
+
+            // compute the resulting sign, which will be negative if exactly one of g'sign and b's sign is negative
+            eors r4, r4, r6 // combine f's sign and a's sign
+            eors r5, r5, r7 // combine g's sign and b's sign
+            eors r4, r4, r5 // mask for negating a * f before adding to b * g
+            stm r3!, {r5}
+            push {r1, r2, r3}
+            // frame address sp,48
+
+            // load f, which is stored as a signed 257-bit number (sign extended to 288 bits) and initially conditionally negated through r6
+            // now conditionally negate it depending on the r4 mask
+            ldm r2!, {r1, r3, r5-r11}
+            eors r1,  r1,  r4
+            eors r3,  r3,  r4
+            eors r5,  r5,  r4
+            eors r6,  r6,  r4
+            eors r7,  r7,  r4
+            eor  r8,  r8,  r4
+            eor  r9,  r9,  r4
+            eor  r10, r10, r4
+
+            subs r1,  r1,  r4
+            sbcs r3,  r3,  r4
+            sbcs r5,  r5,  r4
+            sbcs r6,  r6,  r4
+            sbcs r7,  r7,  r4
+            sbcs r8,  r8,  r4
+            sbcs r9,  r9,  r4
+            sbcs r10, r10, r4
+            // f is never 0, so we can skip last sbcs (for r11), since we know carry flag would be 0
+            eor r4, r4, r11
+
+            // multiply the signed 257-bit value by |a| (|a| <= 2^31), to get a signed 288-bit result
+            umull r1, lr, r0, r1
+            movs r2, #0
+            umull r11, r12, r2,  r2
+            umaal r2,  lr,  r0,  r3
+            umaal r11, lr,  r0,  r5
+            umull r3,  r5,  r12, r12
+            umaal r3,  lr,  r0,  r6
+            umaal r5,  lr,  r0,  r7
+            umull r6,  r7,  r12, r12
+            umaal r6,  lr,  r0,  r8
+            umaal r7,  lr,  r0,  r9
+            umaal r12, lr,  r0,  r10
+            mla lr, r0, r4, lr
+            // result: r1, r2, r11, r3, r5, r6, r7, r12, lr
+
+            // add b*g (which also fits in a signed 288-bit value) and divide by 2^31 (the low 31 bits will all be zero before div)
+            pop {r0, r4}
+            // frame address sp,40
+            adds r4, r4, #40
+            ldm r4!, {r8, r9}
+            mov r10, #0
+            umaal r1, r10, r0, r8
+            umaal r2, r10, r0, r9
+            adds r1, r1, r1
+            adcs r2, r2, r2
+            ldm r4!, {r1, r8, r9}
+            umaal r10, r11, r0, r1
+            umaal r11, r3, r0, r8
+            umaal r3, r5, r0, r9
+            adcs r10, r10, r10
+            adcs r11, r11, r11
+            adcs r3, r3 ,r3
+            ldm r4, {r1, r4, r8, r9}
+            umaal r5,  r6,  r0, r1
+            umaal r6,  r7,  r0, r4
+            umaal r7,  r12, r0, r8
+            umaal r12, lr,  r0, r9 // by divsteps2 invariant, lr will now be 0 since both f and g each fits in a signed 257-bit value
+            adcs r5, r5, r5
+            adcs r6, r6, r6
+            adcs r7, r7, r7
+            adcs r12, r12, r12
+            sbcs lr, lr, lr // extract the sign bit and sign-extend it
+            mvn lr, lr
+            pop {r1}
+            //frame address sp,36
+            stm r1!, {r2, r10, r11}
+            stm r1!, {r3, r5, r6, r7, r12, lr}
+
+            pop {r4-r11, pc}
+        ",
+        options(raw),
+    );
 }
