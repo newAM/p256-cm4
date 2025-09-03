@@ -473,49 +473,6 @@ P256_order:
  .size P256_order, .-P256_order
 
 
-
-
-
-
- .type P256_check_range_n, %function
-P256_check_range_n:
- .global P256_check_range_n
- push {r4-r11,lr}
-
- ldm r0,{r1-r8}
- orrs r0,r1,r2
- orrs r0,r3
- orrs r0,r4
- orrs r0,r5
- orrs r0,r6
- orrs r0,r7
- orrs r0,r8
- beq 0f
-
- adr r0,P256_order
- ldm r0!,{r9-r12}
- subs r1,r9
- sbcs r2,r2,r10
- sbcs r3,r3,r11
- sbcs r4,r4,r12
- ldm r0,{r0-r3}
- sbcs r5,r5,r0
- sbcs r6,r6,r1
- sbcs r7,r7,r2
- sbcs r8,r8,r3
-
- sbcs r0,r0,r0
- lsrs r0,#31
-0:
- pop {r4-r11,pc}
-
- .size P256_check_range_n, .-P256_check_range_n
-
-
-
-
-
-
  .align 2
 b_mont:
  .word 0x29c4bddf
