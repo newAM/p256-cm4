@@ -590,46 +590,6 @@ P256_jacobian_to_affine:
  pop {r4-r11,pc}
  .size P256_jacobian_to_affine, .-P256_jacobian_to_affine
 
- .type add_sub_helper, %function
-add_sub_helper:
- push {lr}
-
- ldm r1!,{r5-r12}
- stm r0!,{r5-r12}
- ldm r1!,{r5-r12}
- cbz r2,0f
-
- mov lr,#0
- rsbs r4,r2,#0
- subs r5,r4,r5
- sbcs r6,r4,r6
- sbcs r7,r4,r7
- sbcs r8,lr,r8
- sbcs r9,lr,r9
- sbcs r10,lr,r10
- sbcs r11,r2,r11
- sbcs r12,r4,r12
-0:
- stm r0!,{r5-r12}
- cbnz r3,1f
- ldm r1,{r5-r12}
- stm r0,{r5-r12}
- b 2f
-1:
-
- movs r4,#0
- umull r5,r10,r4,r4
- mvns r6,r4
- mvns r7,r4
- mov r8,#0xffffffff
- mov r9,#0xfffffffe
-
- stm r0,{r3-r10}
-2:
- pop {pc}
-
- .size add_sub_helper, .-add_sub_helper
-
  .type P256_negate_mod_n_if, %function
 P256_negate_mod_n_if:
  .global P256_negate_mod_n_if

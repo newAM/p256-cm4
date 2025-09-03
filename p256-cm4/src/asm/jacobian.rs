@@ -514,11 +514,7 @@ pub unsafe extern "C" fn P256_add_sub_j(
         P256_addmod = sym super::P256_addmod,
         P256_submod = sym super::P256_submod,
         P256_times2 = sym P256_times2,
-        add_sub_helper = sym add_sub_helper,
+        add_sub_helper = sym super::add_sub_helper,
         P256_double_j = sym P256_double_j,
     )
-}
-
-unsafe extern "C" {
-    fn add_sub_helper();
 }
