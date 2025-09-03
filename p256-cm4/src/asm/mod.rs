@@ -26,6 +26,8 @@ pub(self) use mulmod::P256_mulmod;
 mod verify;
 pub use verify::P256_verify_last_step;
 
+mod util;
+
 /// The order of the P256 curve.
 ///
 /// Code that relies on this static being fewer than 4096 bytes away

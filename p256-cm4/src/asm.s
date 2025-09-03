@@ -26,55 +26,6 @@ arm-none-eabi-gcc \
 
  .text
  .align 2
-# 113 "P256-Cortex-M4/p256-cortex-m4-asm-gcc.S"
- .type mul288x288, %function
-mul288x288:
- push {r4-r11,lr}
-
-
- mov r4,r0
- mov r5,r2
- mov r6,r1
-
- movs r1,#72
- bl setzero
-
- ldm r5,{r0-r2,r8-r12,lr}
-
- movs r7,#9
-0:
- ldm r6!,{r5}
- push {r6,r7}
-
- movs r3,#0
- ldm r4,{r6,r7}
- umaal r6,r3,r5,r0
- umaal r7,r3,r5,r1
- stm r4!,{r6,r7}
- ldm r4,{r6,r7}
- umaal r6,r3,r5,r2
- umaal r7,r3,r5,r8
- stm r4!,{r6,r7}
- ldm r4,{r6,r7}
- umaal r6,r3,r5,r9
- umaal r7,r3,r5,r10
- stm r4!,{r6,r7}
- ldm r4,{r6,r7}
- umaal r6,r3,r5,r11
- umaal r7,r3,r5,r12
- stm r4!,{r6,r7}
- ldm r4,{r6}
- umaal r3,r6,r5,lr
- stm r4!,{r3,r6}
-
- subs r4,r4,#36
- pop {r6,r7}
-
- subs r7,r7,#1
- bne 0b
-
- pop {r4-r11,pc}
- .size mul288x288, .-mul288x288
 
  .type setzero, %function
 setzero:
