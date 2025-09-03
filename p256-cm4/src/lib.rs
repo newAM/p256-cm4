@@ -2,8 +2,8 @@
 #![allow(clippy::missing_safety_doc)]
 
 use crate::asm::{
-    P256_check_range_n, P256_decompress_point, P256_double_j, P256_from_montgomery,
-    P256_point_is_on_curve, P256_to_montgomery, P256_verify_last_step,
+    P256_check_range_n, P256_decompress_point, P256_divsteps2_31, P256_double_j,
+    P256_from_montgomery, P256_point_is_on_curve, P256_to_montgomery, P256_verify_last_step,
     jacobian::{P256_add_sub_j, P256_jacobian_to_affine},
 };
 
@@ -14,9 +14,6 @@ core::arch::global_asm!(include_str!("./asm.s"), options(raw));
 mod asm;
 
 unsafe extern "C" {
-
-    // int P256_divsteps2_31(int delta, uint32_t f, uint32_t g, uint32_t res_matrix[4]);
-    fn P256_divsteps2_31(delta: i32, f: u32, g: u32, res_matrix: *mut u32) -> i32;
     // void P256_matrix_mul_fg_9(uint32_t a, uint32_t b, const struct FGInteger fg[2], struct FGInteger *res);
     fn P256_matrix_mul_fg_9(a: u32, b: u32, fg: *const FGInteger, res: *mut FGInteger);
 
@@ -944,7 +941,7 @@ fn mod_n_inv(res: &mut [u32; 8], a: &[u32; 8]) {
                 delta,
                 (state[i % 2].fg[0].signed_value[0] ^ negate_f).wrapping_sub(negate_f),
                 (state[i % 2].fg[1].signed_value[0] ^ negate_g).wrapping_sub(negate_g),
-                matrix.as_mut_ptr(),
+                &raw mut matrix,
             )
         };
 

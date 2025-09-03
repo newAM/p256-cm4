@@ -18,7 +18,7 @@ mod sqrt;
 pub(crate) use sqrt::P256_modinv_sqrt;
 
 mod matrix;
-pub use matrix::P256_matrix_mul_mod_n;
+pub use matrix::{P256_divsteps2_31, P256_matrix_mul_mod_n};
 
 mod mulmod;
 pub(self) use mulmod::P256_mulmod;

@@ -200,3 +200,89 @@ pub unsafe extern "C" fn P256_matrix_mul_mod_n(
             ",
     )
 }
+
+/// Given values `delta`, `f` and `g`, perform some matrix computation.
+///
+/// TODO: figure out what this computes
+///
+/// # Inputs
+/// Register `r0` shall contain `delta`, a 32-bit signed integer.
+///
+/// Register `r1` shall contain `f`, a 32-bit unsigned integer.
+///
+/// Register `r2` shall contain `g`, a 32-bit unsigned integer.
+///
+/// Register `r3` shall contain a valid `*mut [u32; 4]`
+///
+/// # Return
+/// On return, `r0` will contain `delta`, and the dereference of the input value of `r3` shall contain the result
+/// of the computation.
+#[unsafe(no_mangle)]
+#[unsafe(naked)]
+pub unsafe extern "C" fn P256_divsteps2_31(delta: i32, f: u32, g: u32, res: *mut [u32; 4]) -> i32 {
+    naked_asm!(
+        "
+            push {r3, r4-r8, lr}
+            // frame push {r3, r4-r8, lr}
+            // frame address sp,28
+
+            // u,v,q,r
+            movs r4, #1
+            movs r5, #0
+            movs r6, #0
+            movs r7, #1
+
+            // counter
+            mov lr, #31
+
+            0:
+            subs r3, r0, #1
+            lsl r12, r2, #31
+            bic r3, r12, r3
+            asrs r3, r3, #31 // mask
+            lsr r8, r3, #31  // b
+
+            // conditionally negate delta
+            eors r0 ,r0 ,r3
+            subs r0 ,r0 ,r3
+
+            mul r12, r1, r3 // t = f * -b (= f * m)
+            bics r1, r1, r3 // f &= ~m
+            umlal r1, r12, r2, r8 // f += g * b
+            umaal r2, r12, r2, r3 // g += t + g * -b (= g * m)
+
+            mul r12, r4, r3
+            bics r4, r4, r3
+            umlal r4, r12, r6, r8
+            umaal r6, r12, r6, r3
+
+            mul r12, r5, r3
+            bics r5, r5, r3
+            umlal r5, r12, r7, r8
+            umaal r7, r12, r7, r3
+
+            ands r12, r2, #1 // g0 = g & 1
+            adds r0, r0, #1 // delta += 1
+
+            // g = (g + g0 * f) / 2
+            mul r3, r12, r1
+            adds r2, r2, r3
+            lsrs r2, r2, #1 // we don't need the MSB
+
+            umlal r6, r8, r12, r4 // q += g0 * u
+            umlal r7, r8, r12, r5 // r += g0 * v
+
+            adds r4, r4, r4 // u *= 2
+            adds r5, r5, r5 // v *= 2
+
+            subs lr, lr, #1
+            bne 0b
+
+            pop {r3}
+            stm r3!, {r4-r7}
+
+            pop {r4-r8,pc}
+        ",
+        options(raw)
+    )
+}
