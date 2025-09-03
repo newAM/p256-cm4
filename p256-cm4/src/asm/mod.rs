@@ -29,6 +29,8 @@ pub use verify::P256_verify_last_step;
 mod util;
 pub use util::{P256_check_range_n, add_sub_helper};
 
+mod reduce;
+
 /// The order of the P256 curve.
 ///
 /// Code that relies on this static being fewer than 4096 bytes away

@@ -82,48 +82,6 @@ P256_order_mu:
  .word 0x0
  .word 0x1
 
-
-
-
-
- .type P256_reduce_mod_n_once, %function
-P256_reduce_mod_n_once:
- push {lr}
-
-
- adr r10,P256_order
- ldm r10,{r10,r11,r12,lr}
- subs r0,r10
- sbcs r1,r1,r11
- sbcs r2,r2,r12
- sbcs r3,r3,lr
- sbcs r4,r4,#0xffffffff
- sbcs r5,r5,#0xffffffff
- sbcs r6,r6,#0
- sbcs r7,r7,#0xffffffff
- sbcs r8,r8,#0
-
- sbc r9,r9,r9
- and r10,r9
- and r11,r9
- and r12,r9
- and lr,r9
-
- adds r0,r10
- adcs r1,r1,r11
- adcs r2,r2,r12
- adcs r3,r3,lr
- adcs r4,r4,r9
- adcs r5,r5,r9
- adcs r6,r6,#0
- adcs r7,r7,r9
- adcs r8,r8,#0
-
- pop {pc}
- .size P256_reduce_mod_n_once, .-P256_reduce_mod_n_once
-
-
-
  .type P256_reduce_mod_n_64bytes, %function
 P256_reduce_mod_n_64bytes:
  push {r0,r4-r11,lr}
