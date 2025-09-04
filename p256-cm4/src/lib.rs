@@ -10,9 +10,6 @@ use crate::asm::{
 };
 
 #[cfg(target_arch = "arm")]
-core::arch::global_asm!(include_str!("./asm.s"), options(raw));
-
-#[cfg(target_arch = "arm")]
 mod asm;
 
 const ONE_MONTGOMERY: [u32; 8] = [1, 0, 0, 0xffffffff, 0xffffffff, 0xffffffff, 0xfffffffe, 0];
