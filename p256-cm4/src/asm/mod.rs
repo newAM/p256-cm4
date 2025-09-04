@@ -6,7 +6,7 @@ mod sqrmod;
 pub(crate) use sqrmod::P256_sqrmod;
 
 mod add_sub;
-pub(crate) use add_sub::{P256_addmod, P256_submod};
+pub(crate) use add_sub::{P256_add_mod_n, P256_addmod, P256_submod};
 
 pub(crate) mod jacobian;
 pub use jacobian::P256_double_j;
@@ -30,7 +30,9 @@ mod util;
 pub use util::{P256_check_range_n, P256_check_range_p, add_sub_helper, mul288x288};
 
 mod reduce;
-pub(crate) use reduce::{P256_reduce_mod_n_32bytes, P256_reduce_mod_n_64bytes};
+pub(crate) use reduce::{
+    P256_reduce_mod_n_32bytes, P256_reduce_mod_n_64bytes, P256_reduce_mod_n_once,
+};
 
 /// The order of the P256 curve.
 ///

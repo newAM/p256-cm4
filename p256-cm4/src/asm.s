@@ -26,43 +26,6 @@ arm-none-eabi-gcc \
 
  .text
 
-
-
-
-
- .type P256_add_mod_n, %function
-P256_add_mod_n:
- .global P256_add_mod_n
- push {r0,r4-r11,lr}
-
-
-
- mov r12,r1
-
- ldm r2,{r4-r11}
- ldm r12!,{r0-r3}
- adds r0,r4
- adcs r1,r1,r5
- adcs r2,r2,r6
- adcs r3,r3,r7
- ldm r12,{r4-r7}
- adcs r4,r4,r8
- adcs r5,r5,r9
- adcs r6,r6,r10
- adcs r7,r7,r11
- movs r8,#0
- adcs r8,r8,r8
-
- bl P256_reduce_mod_n_once
- bl P256_reduce_mod_n_once
- pop {r8}
-
- stm r8,{r0-r7}
-
- pop {r4-r11,pc}
-
- .size P256_add_mod_n, .-P256_add_mod_n
-
 # 2371 "P256-Cortex-M4/p256-cortex-m4-asm-gcc.S"
  .align 2
 P256_order_local:
