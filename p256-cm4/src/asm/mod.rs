@@ -27,7 +27,7 @@ mod verify;
 pub use verify::P256_verify_last_step;
 
 mod util;
-pub use util::{P256_check_range_n, add_sub_helper};
+pub use util::{P256_check_range_n, P256_check_range_p, add_sub_helper};
 
 mod reduce;
 
