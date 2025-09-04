@@ -25,21 +25,6 @@ arm-none-eabi-gcc \
 
 
  .text
- .type P256_reduce_mod_n_32bytes, %function
-P256_reduce_mod_n_32bytes:
- .global P256_reduce_mod_n_32bytes
- push {r0,r4-r11,lr}
-
-
- ldm r1,{r0-r7}
- mov r8,#0
- bl P256_reduce_mod_n_once
- pop {r8}
-
- stm r8,{r0-r7}
- pop {r4-r11,pc}
- .size P256_reduce_mod_n_32bytes, .-P256_reduce_mod_n_32bytes
-
 
 
 
