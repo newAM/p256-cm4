@@ -173,3 +173,31 @@ pub unsafe extern "C" fn P256_check_range_n(a: *const [u32; 8]) -> bool {
         P256_ORDER = sym super::P256_ORDER
     )
 }
+
+/// Given input `n`, zero `n * 8` bytes.
+///
+/// # Inputs
+/// `r0` shall contain a valid, word-aligned `*mut u8` that is valid for writes of `n * 8` bytes.
+///
+/// `r1` shall contain `n * 8` (this value _must_ be a multiple of 8), i.e. 16 to clear 16 bytes.
+///
+/// # Returns
+/// This function does not return any values.
+///
+/// This function clobbers r0, r1, r2 and r3.
+#[unsafe(naked)]
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn setzero() {
+    naked_asm!(
+        "
+            movs r2, #0
+            movs r3, #0
+        0:
+            stm r0!, {r2,r3}
+            subs r1, r1, #8
+            bne 0b
+            bx lr
+        ",
+        options(raw)
+    )
+}
