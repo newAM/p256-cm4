@@ -28,7 +28,8 @@ pub use verify::P256_verify_last_step;
 
 mod util;
 pub use util::{
-    P256_check_range_n, P256_check_range_p, P256_negate_mod_n_if, add_sub_helper, mul288x288,
+    P256_check_range_n, P256_check_range_p, P256_negate_mod_n_if, P256_negate_mod_p_if,
+    add_sub_helper, mul288x288,
 };
 
 mod reduce;
