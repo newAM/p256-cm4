@@ -4,7 +4,8 @@
 use crate::asm::{
     P256_add_mod_n, P256_check_range_n, P256_check_range_p, P256_decompress_point,
     P256_divsteps2_31, P256_double_j, P256_from_montgomery, P256_matrix_mul_fg_9, P256_mul_mod_n,
-    P256_point_is_on_curve, P256_reduce_mod_n_32bytes, P256_to_montgomery, P256_verify_last_step,
+    P256_negate_mod_n_if, P256_point_is_on_curve, P256_reduce_mod_n_32bytes, P256_to_montgomery,
+    P256_verify_last_step,
     jacobian::{P256_add_sub_j, P256_jacobian_to_affine},
 };
 
@@ -17,8 +18,6 @@ mod asm;
 unsafe extern "C" {
     // void P256_negate_mod_p_if(uint32_t out[8], const uint32_t in[8], uint32_t should_negate);
     fn P256_negate_mod_p_if(out: *mut u32, inn: *const u32, should_negate: u32);
-    // void P256_negate_mod_n_if(uint32_t out[8], const uint32_t in[8], uint32_t should_negate);
-    fn P256_negate_mod_n_if(out: *mut u32, inn: *const u32, should_negate: u32);
 }
 
 const ONE_MONTGOMERY: [u32; 8] = [1, 0, 0, 0xffffffff, 0xffffffff, 0xffffffff, 0xfffffffe, 0];
@@ -239,7 +238,7 @@ fn scalarmult_variable_base(
     // The algorithm used requires the scalar to be odd. If even, negate the scalar modulo p to make it odd, and later negate the end result.
     let mut scalar2: [u32; 8] = [0; 8];
     let even: u32 = ((scalar[0]) & 1) ^ 1;
-    unsafe { P256_negate_mod_n_if(scalar2.as_mut_ptr(), scalar.as_ptr(), even) };
+    unsafe { P256_negate_mod_n_if(&mut scalar2, scalar, even) };
 
     // Rewrite the scalar as e[0] + 2^4*e[1] + 2^8*e[2] + ... + 2^252*e[63], where each e[i] is an odd number and -15 <= e[i] <= 15.
     let mut e: [i8; 64] = [0; 64];
@@ -445,7 +444,7 @@ fn scalarmult_fixed_base(
 
     // Just as with the algorithm used in variable base scalar multiplication, this algorithm requires the scalar to be odd.
     let even: u32 = ((scalar[0]) & 1) ^ 1;
-    unsafe { P256_negate_mod_n_if(scalar2.as_mut_ptr(), scalar.as_ptr(), even) };
+    unsafe { P256_negate_mod_n_if(&mut scalar2, scalar, even) };
 
     // This algorithm conceptually rewrites the odd scalar as s[0] + 2^1*s[1] + 2^2*s[2] + ... + 2^255*s[255], where each s[i] is -1 or 1.
     // By initially setting s[i] to the corresponding bit S[i] in the original odd scalar S, we go from lsb to msb, and whenever a value s[i] is 0,
@@ -960,8 +959,8 @@ fn mod_n_inv(res: &mut [u32; 8], a: &[u32; 8]) {
     // In this implementation, at this point x contains v * 2^-744.
     unsafe {
         P256_negate_mod_n_if(
-            res.as_mut_ptr(),
-            &state[0].xy[0].value[0],
+            res,
+            &state[0].xy[0].value,
             ((state[0].xy[0].flip_sign
                 ^ state[0].fg[0].flip_sign
                 ^ (state[0].fg[0].signed_value[8] as i32))
