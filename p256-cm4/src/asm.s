@@ -75,12 +75,6 @@ P256_p:
  .word 1
  .word 0xffffffff
 
- .type P256_negate_mod_n_if, %function
-P256_negate_mod_n_if:
- .global P256_negate_mod_n_if
- ldr r3,=P256_order
- b P256_negate_mod_m_if
- .size P256_negate_mod_n_if, .-P256_negate_mod_n_if
 
  .type P256_negate_mod_p_if, %function
 P256_negate_mod_p_if:

@@ -27,7 +27,9 @@ mod verify;
 pub use verify::P256_verify_last_step;
 
 mod util;
-pub use util::{P256_check_range_n, P256_check_range_p, add_sub_helper, mul288x288};
+pub use util::{
+    P256_check_range_n, P256_check_range_p, P256_negate_mod_n_if, add_sub_helper, mul288x288,
+};
 
 mod reduce;
 pub(crate) use reduce::{
