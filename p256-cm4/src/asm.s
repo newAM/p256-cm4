@@ -25,19 +25,6 @@ arm-none-eabi-gcc \
 
 
  .text
- .align 2
-
- .type setzero, %function
-setzero:
- movs r2,#0
- movs r3,#0
-0:
- stm r0!,{r2,r3}
- subs r1,r1,#8
- bne 0b
- bx lr
- .size setzero, .-setzero
-
  .type P256_check_range_p, %function
 P256_check_range_p:
  .global P256_check_range_p
