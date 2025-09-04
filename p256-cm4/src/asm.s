@@ -78,51 +78,6 @@ P256_add_mod_n:
 
  .size P256_add_mod_n, .-P256_add_mod_n
 
-
-
-
-
-
-
- .type P256_mul_mod_n, %function
-P256_mul_mod_n:
- .global P256_mul_mod_n
- movs r3,#0
- push {r3-r10,lr}
-
-
-
- mov r4,r0
-
- ldm r1,{r1,r3,r5-r10}
- push {r1,r3,r5-r10}
-
-
- movs r1,#0
- push {r1}
-
- ldm r2,{r1,r3,r5-r10}
- push {r1,r3,r5-r10}
-
-
- sub sp,#72
-
-
- mov r0,sp
- add r1,sp,#72
- add r2,sp,#108
- bl mul288x288
-
- mov r0,r4
- mov r1,sp
- bl P256_reduce_mod_n_64bytes
-
- add sp,#144
-
- pop {r4-r10,pc}
-
- .size P256_mul_mod_n, .-P256_mul_mod_n
-
 # 2371 "P256-Cortex-M4/p256-cortex-m4-asm-gcc.S"
  .align 2
 P256_order_local:
