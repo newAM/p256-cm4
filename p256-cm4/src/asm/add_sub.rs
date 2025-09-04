@@ -107,3 +107,57 @@ pub unsafe extern "C" fn P256_addmod() {
         "
     )
 }
+
+/// Given two numbers `a` and `b`, compute `a + b mod n` where `n` is the P256 order.
+///
+/// # Inputs
+/// `r0` shall contain a valid `*mut [u32; 8]`.
+///
+/// `r1` shall contain `a`, a valid `*const [u32; 8]`.
+///
+/// `r2` shall contain `b`, a valid `*const [u32; 8]`.
+///
+/// # Return
+/// On return, the dereference of the input value of `r0` will contain the result of the computation.
+///
+/// > **Note**: `r0` will be overriden during the execution of this function (it is callee-saved).
+#[unsafe(no_mangle)]
+#[unsafe(naked)]
+pub unsafe extern "C" fn P256_add_mod_n(
+    res: *mut [u32; 8],
+    a: *const [u32; 8],
+    b: *const [u32; 8],
+) {
+    naked_asm!(
+        "
+            push {{r0, r4-r11, lr}}
+            // frame push {{r0, r4-r11,lr}}
+            // frame address sp,40
+
+            mov r12, r1
+
+            ldm r2, {{r4-r11}}
+            ldm r12!, {{r0-r3}}
+            adds r0, r4
+            adcs r1, r1, r5
+            adcs r2, r2, r6
+            adcs r3, r3, r7
+            ldm r12, {{r4-r7}}
+            adcs r4, r4, r8
+            adcs r5, r5, r9
+            adcs r6, r6, r10
+            adcs r7, r7, r11
+            movs r8, #0
+            adcs r8, r8, r8
+
+            bl {P256_reduce_mod_n_once}
+            bl {P256_reduce_mod_n_once}
+            pop {{r8}}
+            // frame address sp,36
+            stm r8, {{r0-r7}}
+
+            pop {{r4-r11, pc}}
+        ",
+        P256_reduce_mod_n_once = sym super::P256_reduce_mod_n_once,
+    )
+}
