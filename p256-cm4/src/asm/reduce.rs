@@ -59,6 +59,37 @@ pub unsafe extern "C" fn P256_reduce_mod_n_once() {
 /// Given a number `a`, do something. TODO: figure out what the heck this actually does.
 ///
 /// # Inputs
+/// `r0` shall contain a valid `*mut [u32; 8]`.
+///
+/// `r1` shall contain `a`, a valid `*const [u32; 8]`
+///
+/// The pointers in `r0` and `r1` may overlap.
+///
+/// # Return
+/// On return, the dereference of the input value of `r0` shall contain the result of the computation.
+#[unsafe(naked)]
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn P256_reduce_mod_n_32bytes(res: *mut [u32; 8], a: *const [u32; 8]) {
+    naked_asm!(
+        "
+            push {{r0, r4-r11, lr}}
+            //frame push {{r0, r4-r11, lr}}
+            // frame address sp, 40
+            ldm r1, {{r0-r7}}
+            mov r8, #0
+            bl {P256_reduce_mod_n_once}
+            pop {{r8}}
+            // frame address sp, 36
+            stm r8, {{r0-r7}}
+            pop {{r4-r11,pc}}
+        ",
+        P256_reduce_mod_n_once = sym P256_reduce_mod_n_once,
+    )
+}
+
+/// Given a number `a`, do something. TODO: figure out what the heck this actually does.
+///
+/// # Inputs
 /// `r0` shall contain a valid `*mut [u8; 8]`.
 ///
 /// `r1` shall contain `a`, a valid `*const [u8; 9]`.

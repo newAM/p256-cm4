@@ -4,7 +4,7 @@
 use crate::asm::{
     P256_check_range_n, P256_check_range_p, P256_decompress_point, P256_divsteps2_31,
     P256_double_j, P256_from_montgomery, P256_matrix_mul_fg_9, P256_mul_mod_n,
-    P256_point_is_on_curve, P256_to_montgomery, P256_verify_last_step,
+    P256_point_is_on_curve, P256_reduce_mod_n_32bytes, P256_to_montgomery, P256_verify_last_step,
     jacobian::{P256_add_sub_j, P256_jacobian_to_affine},
 };
 
@@ -17,8 +17,6 @@ mod asm;
 unsafe extern "C" {
     // void P256_add_mod_n(uint32_t res[8], const uint32_t a[8], const uint32_t b[8]);
     fn P256_add_mod_n(res: *mut u32, a: *const u32, b: *const u32);
-    // void P256_reduce_mod_n_32bytes(uint32_t res[8], const uint32_t a[8]);
-    fn P256_reduce_mod_n_32bytes(res: *mut u32, a: *const u32);
 
     // void P256_negate_mod_p_if(uint32_t out[8], const uint32_t in[8], uint32_t should_negate);
     fn P256_negate_mod_p_if(out: *mut u32, inn: *const u32, should_negate: u32);
@@ -629,7 +627,7 @@ pub fn sign_step1(result: &mut SignPrecomp, k: &[u32; 8]) -> bool {
         scalarmult_fixed_base(&mut output_x, &mut output_y, k);
         mod_n_inv(&mut result.k_inv, k);
         unsafe { P256_from_montgomery(&raw mut result.r, &raw const output_x as _) };
-        unsafe { P256_reduce_mod_n_32bytes(result.r.as_mut_ptr(), result.r.as_ptr()) };
+        unsafe { P256_reduce_mod_n_32bytes(&raw mut result.r, &raw const result.r) };
 
         let r_sum: u32 = (0..8).fold(0, |r_sum, i| r_sum | result.r[i]);
         if r_sum == 0 {
