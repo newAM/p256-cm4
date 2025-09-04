@@ -505,3 +505,66 @@ pub unsafe extern "C" fn P256_mulmod() {
         }
     }
 }
+
+/// Given inputs `a` and `b`, calculate `a * b mod n`, where `n` is the P256 order.
+///
+/// # Inputs
+/// `r0` shall contain a valid `*mut [u32; 8]`.
+///
+/// `r1` shall contain `a`, a valid `*const [u32; 8]`.
+///
+/// `r2` shall contain `b`, a valid `*const [u32; 8]`.
+///
+/// `r0` and `r1` and/or `r2` may overlap.
+///
+/// # Returns
+/// On return, the dereference of the input value of `r0` will contain the result of the computation.
+///
+/// > **Note**: `r0` will be overriden during the execution of this function (it is callee-saved).
+#[unsafe(naked)]
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn P256_mul_mod_n(
+    res: *mut [u32; 8],
+    a: *const [u32; 8],
+    b: *const [u32; 8],
+) {
+    naked_asm!(
+        "
+            movs r3,#0
+            push {{r3-r10, lr}}
+            // frame push {{r4-r10, lr}}
+            // frame address sp, 36
+
+            mov r4, r0
+
+            ldm r1,{{r1, r3, r5-r10}}
+            push {{r1, r3, r5-r10}}
+            // frame address sp, 68
+
+            movs r1, #0
+            push {{r1}}
+            // frame address sp,72
+            ldm r2, {{r1, r3, r5-r10}}
+            push {{r1, r3, r5-r10}}
+            // frame address sp,104
+
+            sub sp, #72
+            //frame address sp,176
+
+            mov r0, sp
+            add r1, sp, #72
+            add r2, sp, #108
+            bl {mul288x288} // just reuse the 288x288-bit multiplier rather than also writing a 256x256
+
+            mov r0,r4
+            mov r1,sp
+            bl {P256_reduce_mod_n_64bytes}
+
+            add sp,#144
+            //frame address sp,32
+            pop {{r4-r10,pc}}
+        ",
+        mul288x288 = sym super::mul288x288,
+        P256_reduce_mod_n_64bytes = sym super::P256_reduce_mod_n_64bytes,
+    )
+}

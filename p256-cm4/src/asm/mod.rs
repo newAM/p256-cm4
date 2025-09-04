@@ -21,15 +21,16 @@ mod matrix;
 pub use matrix::{P256_divsteps2_31, P256_matrix_mul_fg_9, P256_matrix_mul_mod_n};
 
 mod mulmod;
-pub(self) use mulmod::P256_mulmod;
+pub(crate) use mulmod::{P256_mul_mod_n, P256_mulmod};
 
 mod verify;
 pub use verify::P256_verify_last_step;
 
 mod util;
-pub use util::{P256_check_range_n, P256_check_range_p, add_sub_helper};
+pub use util::{P256_check_range_n, P256_check_range_p, add_sub_helper, mul288x288};
 
 mod reduce;
+pub(crate) use reduce::P256_reduce_mod_n_64bytes;
 
 /// The order of the P256 curve.
 ///

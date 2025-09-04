@@ -3,8 +3,8 @@
 
 use crate::asm::{
     P256_check_range_n, P256_check_range_p, P256_decompress_point, P256_divsteps2_31,
-    P256_double_j, P256_from_montgomery, P256_matrix_mul_fg_9, P256_point_is_on_curve,
-    P256_to_montgomery, P256_verify_last_step,
+    P256_double_j, P256_from_montgomery, P256_matrix_mul_fg_9, P256_mul_mod_n,
+    P256_point_is_on_curve, P256_to_montgomery, P256_verify_last_step,
     jacobian::{P256_add_sub_j, P256_jacobian_to_affine},
 };
 
@@ -15,8 +15,6 @@ core::arch::global_asm!(include_str!("./asm.s"), options(raw));
 mod asm;
 
 unsafe extern "C" {
-    // void P256_mul_mod_n(uint32_t res[8], const uint32_t a[8], const uint32_t b[8]);
-    fn P256_mul_mod_n(res: *mut u32, a: *const u32, b: *const u32);
     // void P256_add_mod_n(uint32_t res[8], const uint32_t a[8], const uint32_t b[8]);
     fn P256_add_mod_n(res: *mut u32, a: *const u32, b: *const u32);
     // void P256_reduce_mod_n_32bytes(uint32_t res[8], const uint32_t a[8]);
@@ -685,15 +683,9 @@ pub fn sign_step2(
             break;
         }
         hash_to_z(u32x8_to_u8x32_mut(r), hash);
-        unsafe {
-            P256_mul_mod_n(
-                s.as_mut_ptr(),
-                sign_precomp.r.as_ptr(),
-                private_key.as_ptr(),
-            )
-        };
+        unsafe { P256_mul_mod_n(s, &sign_precomp.r, private_key) };
         unsafe { P256_add_mod_n(s.as_mut_ptr(), r as *const u32, s.as_ptr()) };
-        unsafe { P256_mul_mod_n(s.as_mut_ptr(), sign_precomp.k_inv.as_ptr(), s.as_ptr()) };
+        unsafe { P256_mul_mod_n(s, &sign_precomp.k_inv, s) };
 
         r.copy_from_slice(&sign_precomp.r);
 
@@ -809,9 +801,9 @@ pub fn verify(
     mod_n_inv(&mut w, s);
 
     let mut u1: [u32; 8] = [0; 8];
-    unsafe { P256_mul_mod_n(u1.as_mut_ptr(), z.as_ptr(), w.as_ptr()) };
+    unsafe { P256_mul_mod_n(&mut u1, &z, &w) };
     let mut u2: [u32; 8] = [0; 8];
-    unsafe { P256_mul_mod_n(u2.as_mut_ptr(), r.as_ptr(), w.as_ptr()) };
+    unsafe { P256_mul_mod_n(&mut u2, r, &w) };
 
     // Each value in these arrays will be an odd integer v, so that -15 <= v <= 15.
     // Around 1/5.5 of them will be non-zero.
