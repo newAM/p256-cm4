@@ -74,15 +74,5 @@ P256_p:
  .word 0
  .word 1
  .word 0xffffffff
-
-
- .type P256_negate_mod_p_if, %function
-P256_negate_mod_p_if:
- .global P256_negate_mod_p_if
- adr r3,P256_p
- b P256_negate_mod_m_if
- .size P256_negate_mod_p_if, .-P256_negate_mod_p_if
-
-
  .align 2
  .end

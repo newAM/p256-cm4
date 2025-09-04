@@ -4,8 +4,8 @@
 use crate::asm::{
     P256_add_mod_n, P256_check_range_n, P256_check_range_p, P256_decompress_point,
     P256_divsteps2_31, P256_double_j, P256_from_montgomery, P256_matrix_mul_fg_9, P256_mul_mod_n,
-    P256_negate_mod_n_if, P256_point_is_on_curve, P256_reduce_mod_n_32bytes, P256_to_montgomery,
-    P256_verify_last_step,
+    P256_negate_mod_n_if, P256_negate_mod_p_if, P256_point_is_on_curve, P256_reduce_mod_n_32bytes,
+    P256_to_montgomery, P256_verify_last_step,
     jacobian::{P256_add_sub_j, P256_jacobian_to_affine},
 };
 
@@ -14,11 +14,6 @@ core::arch::global_asm!(include_str!("./asm.s"), options(raw));
 
 #[cfg(target_arch = "arm")]
 mod asm;
-
-unsafe extern "C" {
-    // void P256_negate_mod_p_if(uint32_t out[8], const uint32_t in[8], uint32_t should_negate);
-    fn P256_negate_mod_p_if(out: *mut u32, inn: *const u32, should_negate: u32);
-}
 
 const ONE_MONTGOMERY: [u32; 8] = [1, 0, 0, 0xffffffff, 0xffffffff, 0xffffffff, 0xfffffffe, 0];
 
@@ -286,8 +281,8 @@ fn scalarmult_variable_base(
 
         unsafe {
             P256_negate_mod_p_if(
-                selected_point[1].as_mut_ptr(),
-                selected_point[1].as_ptr(),
+                &mut selected_point[1],
+                &selected_point[1],
                 ((e[i] as u8) >> 7) as u32,
             )
         };
@@ -316,7 +311,7 @@ fn scalarmult_variable_base(
 
     // If the scalar was initially even, we now negate the result to get the correct result, since -(scalar*G) = (-scalar*G).
     // This is done by negating y, since -(x,y) = (x,-y).
-    unsafe { P256_negate_mod_p_if(output_mont_y.as_mut_ptr(), output_mont_y.as_mut_ptr(), even) };
+    unsafe { P256_negate_mod_p_if(output_mont_y, output_mont_y, even) };
 }
 
 #[must_use]
@@ -473,11 +468,7 @@ fn scalarmult_fixed_base(
                 mask = (mask ^ sign) & 7;
                 selected_point.copy_from_slice(&P256_BASEPOINT_PRECOMP2[1][mask as usize]);
                 unsafe {
-                    P256_negate_mod_p_if(
-                        selected_point[1].as_mut_ptr(),
-                        selected_point[1].as_ptr(),
-                        sign & 1,
-                    )
+                    P256_negate_mod_p_if(&mut selected_point[1], &selected_point[1], sign & 1)
                 };
                 unsafe {
                     P256_add_sub_j(
@@ -496,13 +487,7 @@ fn scalarmult_fixed_base(
             let sign: u32 = get_bit!(scalar2, i + 3 * 64 + 1).wrapping_sub(1); // positive: 0, negative: -1
             mask = (mask ^ sign) & 7;
             selected_point.copy_from_slice(&P256_BASEPOINT_PRECOMP2[0][mask as usize]);
-            unsafe {
-                P256_negate_mod_p_if(
-                    selected_point[1].as_mut_ptr(),
-                    selected_point[1].as_ptr(),
-                    sign & 1,
-                )
-            };
+            unsafe { P256_negate_mod_p_if(&mut selected_point[1], &selected_point[1], sign & 1) };
             unsafe {
                 P256_add_sub_j(
                     &raw mut current_point as _,
@@ -523,7 +508,7 @@ fn scalarmult_fixed_base(
     };
 
     // Negate final result if the scalar was initially even.
-    unsafe { P256_negate_mod_p_if(output_mont_y.as_mut_ptr(), output_mont_y.as_mut_ptr(), even) };
+    unsafe { P256_negate_mod_p_if(output_mont_y, output_mont_y, even) };
 }
 
 /// Raw scalar multiplication by the base point of the elliptic curve.

@@ -240,13 +240,13 @@ pub unsafe extern "C" fn setzero() {
 }
 
 /// Given inputs `a` and `should_negate`:
-/// 1. If `should_negate == 1`, compute `p - a` where `p` is the P256 order.
+/// 1. If `should_negate == 1`, compute `n - a` where `n` is the P256 order.
 /// 2. Else, copy `a`.
 ///
 /// # Inputs
 /// `r0` shall contain a valid `*mut [u32; 8]`.
 ///
-/// `r1` shall contain `a`, a valid `*const [u32; 8]`, where `1 <= a <= p - 1`.
+/// `r1` shall contain `a`, a valid `*const [u32; 8]`, where `1 <= a <= n - 1`.
 ///
 /// `r2` shall contain `should_negate`, a `u32` that is either 1 or 0.
 ///
@@ -270,6 +270,41 @@ pub unsafe extern "C" fn P256_negate_mod_n_if(
 	        b {P256_negate_mod_m_if}
         ",
         P256_order = sym super::P256_ORDER,
+        P256_negate_mod_m_if = sym super::P256_negate_mod_m_if,
+    )
+}
+
+/// Given inputs `a` and `should_negate`:
+/// 1. If `should_negate == 1`, compute `p - a` where `p` is the P256 prime.
+/// 2. Else, copy `a`.
+///
+/// # Inputs
+/// `r0` shall contain a valid `*mut [u32; 8]`.
+///
+/// `r1` shall contain `a`, a valid `*const [u32; 8]`, where `1 <= a <= p - 1`.
+///
+/// `r2` shall contain `should_negate`, a `u32` that is either 1 or 0.
+///
+/// The pointers in `r0` and `r1` may overlap.
+///
+/// # Return
+/// On return, the dereference of the input value of `r0` shall contain the result of the computation.
+///
+/// > **Note**: `r0` will be overriden during the execution of this function (it is callee-saved).
+#[unsafe(naked)]
+#[unsafe(no_mangle)]
+#[unsafe(link_section = ".p256-cortex-m4")]
+pub unsafe extern "C" fn P256_negate_mod_p_if(
+    out: *mut [u32; 8],
+    inn: *const [u32; 8],
+    should_negate: u32,
+) {
+    naked_asm!(
+        "
+        	ldr r3, ={P256_p}
+	        b {P256_negate_mod_m_if}
+        ",
+        P256_p = sym super::P256_PRIME,
         P256_negate_mod_m_if = sym super::P256_negate_mod_m_if,
     )
 }
