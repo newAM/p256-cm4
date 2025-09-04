@@ -25,67 +25,6 @@ arm-none-eabi-gcc \
 
 
  .text
- .align 2
-P256_order_mu:
- .word 0xeedf9bfe
- .word 0x012ffd85
- .word 0xdf1a6c21
- .word 0x43190552
- .word 0xffffffff
- .word 0xfffffffe
- .word 0xffffffff
- .word 0x0
- .word 0x1
-
- .type P256_reduce_mod_n_64bytes, %function
-P256_reduce_mod_n_64bytes:
- push {r0,r4-r11,lr}
-
- sub sp,sp,#108
-
-
- mov r10,r1
-
- add r0,sp,#36
- adds r1,r1,#28
- adr r2,P256_order_mu
- bl mul288x288
-
- mov r0,sp
- add r1,sp,#72
- adr r2,P256_order
- bl mul288x288
-
- ldm r10,{r0-r8}
- pop {r9-r12}
-
- subs r0,r0,r9
- sbcs r1,r1,r10
- sbcs r2,r2,r11
- sbcs r3,r3,r12
- pop {r9-r12,lr}
-
- sbcs r4,r4,r9
- sbcs r5,r5,r10
- sbcs r6,r6,r11
- sbcs r7,r7,r12
- sbcs r8,r8,lr
-
- bl P256_reduce_mod_n_once
- bl P256_reduce_mod_n_once
- add sp,sp,#72
-
- pop {r9}
-
-
- stm r9,{r0-r7}
-
- pop {r4-r11,pc}
- .size P256_reduce_mod_n_64bytes, .-P256_reduce_mod_n_64bytes
-
-
-
-
  .type P256_reduce_mod_n_32bytes, %function
 P256_reduce_mod_n_32bytes:
  .global P256_reduce_mod_n_32bytes
