@@ -2,9 +2,9 @@
 #![allow(clippy::missing_safety_doc)]
 
 use crate::asm::{
-    P256_check_range_n, P256_decompress_point, P256_divsteps2_31, P256_double_j,
-    P256_from_montgomery, P256_matrix_mul_fg_9, P256_point_is_on_curve, P256_to_montgomery,
-    P256_verify_last_step,
+    P256_check_range_n, P256_check_range_p, P256_decompress_point, P256_divsteps2_31,
+    P256_double_j, P256_from_montgomery, P256_matrix_mul_fg_9, P256_point_is_on_curve,
+    P256_to_montgomery, P256_verify_last_step,
     jacobian::{P256_add_sub_j, P256_jacobian_to_affine},
 };
 
@@ -26,8 +26,6 @@ unsafe extern "C" {
     fn P256_negate_mod_p_if(out: *mut u32, inn: *const u32, should_negate: u32);
     // void P256_negate_mod_n_if(uint32_t out[8], const uint32_t in[8], uint32_t should_negate);
     fn P256_negate_mod_n_if(out: *mut u32, inn: *const u32, should_negate: u32);
-
-    fn P256_check_range_p(a: &[u32; 8]) -> bool;
 }
 
 const ONE_MONTGOMERY: [u32; 8] = [1, 0, 0, 0xffffffff, 0xffffffff, 0xffffffff, 0xfffffffe, 0];

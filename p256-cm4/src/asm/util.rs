@@ -174,6 +174,43 @@ pub unsafe extern "C" fn P256_check_range_n(a: *const [u32; 8]) -> bool {
     )
 }
 
+/// Given a number `a`, compute `0 <= a <= p - 1`, where `p` is the P256-prime.
+///
+/// # Inputs
+/// `r0` shall contain `a`, a valid `*const [u32; 8]`.
+///
+/// # Returns
+/// On return, `r0` will contain the result of the computation as a boolean.
+#[unsafe(naked)]
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn P256_check_range_p(a: *const [u32; 8]) -> bool {
+    naked_asm!(
+        "
+            push {r4-r8, lr}
+            //frame push {r4-r8, lr}
+
+            ldm r0, {r1-r8}
+
+            movs r0, #0xffffffff
+
+            subs r1, r0
+            sbcs r2, r2, r0
+            sbcs r3, r3, r0
+            sbcs r4, r4, #0
+            sbcs r5, r5, #0
+            sbcs r6, r6, #0
+            sbcs r7, r7, #1
+            sbcs r8, r8, r0
+
+            sbcs r0, r0, r0
+            lsrs r0, #31
+
+            pop {r4-r8, pc}
+        ",
+        options(raw)
+    )
+}
+
 /// Given input `n`, zero `n * 8` bytes.
 ///
 /// # Inputs
