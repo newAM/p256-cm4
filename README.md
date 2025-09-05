@@ -28,7 +28,7 @@ As measured on a STM32WLE5.
 
 ### Testing
 
-Install [probe-run].
+Install [probe-rs-tools].
 
 Adjust `.cargo/config.toml`, `memory.x`, `testsuite/Cargo.toml`, and the clock setup for your target.
 
@@ -49,4 +49,4 @@ arm-none-eabi-gcc -O0 -ffunction-sections -fdata-sections -g -fno-omit-frame-poi
 [ycrypto/p256-cortex-m4]: https://github.com/ycrypto/p256-cortex-m4
 [ycrypto/p256-cortex-m4-sys]: https://github.com/ycrypto/p256-cortex-m4-sys
 [RustCrypto]: https://github.com/RustCrypto/elliptic-curves
-[probe-run]: https://github.com/knurling-rs/probe-run
+[probe-rs-tools]: https://probe.rs/docs/getting-started/installation/
