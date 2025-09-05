@@ -7,6 +7,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 ### Changed
 - Updated the edition from 2021 to 2024.
+- Change `global_asm` implementation to individual `naked_asm` functions ([#23](https://github.com/newAM/p256-cm4/pull/23)).
 
 ## [0.3.0] - 2022-08-07
 ### Changed
