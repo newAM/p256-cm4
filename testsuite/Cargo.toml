@@ -1,10 +1,11 @@
 [package]
-authors = ["Alex Martens <alex@thinglab.org>"]
 name = "testsuite"
 publish = false
-edition = "2024"
 version = "0.1.0"
-license = "MIT"
+authors.workspace = true
+edition.workspace = true
+repository.workspace = true
+license.workspace = true
 
 [[bin]]
 name = "basic"
