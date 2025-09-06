@@ -6,7 +6,7 @@
 
 A (mostly) rust re-implementation of [Emill/P256-Cortex-M4].
 
-Rust 1.59.0 stabilized the [global_asm] macro which allows for this to be compiled without any additional tooling.  No `build.rs` script or external assembler required.
+Rust 1.88.0 stabilized the [naked_asm] macro which allows for this to be compiled without any additional tooling.  No `build.rs` script or external assembler required.
 
 ## Limitations
 
@@ -45,7 +45,7 @@ arm-none-eabi-gcc -O0 -ffunction-sections -fdata-sections -g -fno-omit-frame-poi
 ```
 
 [Emill/P256-Cortex-M4]: https://github.com/Emill/P256-Cortex-M4
-[global_asm]: https://doc.rust-lang.org/core/arch/macro.global_asm.html
+[naked_asm]: https://doc.rust-lang.org/core/arch/macro.naked_asm.html
 [ycrypto/p256-cortex-m4]: https://github.com/ycrypto/p256-cortex-m4
 [ycrypto/p256-cortex-m4-sys]: https://github.com/ycrypto/p256-cortex-m4-sys
 [RustCrypto]: https://github.com/RustCrypto/elliptic-curves
