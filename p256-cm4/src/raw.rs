@@ -1,8 +1,8 @@
 use crate::sys::{
-    Montgomery, add_mod_n_in_place, add_sub_j, add_sub_j_affine, decompress_point, divsteps2_31,
-    double_j, double_j_inplace, jacobian_to_affine, matrix_mul_fg_9, matrix_mul_mod_n, mul_mod_n,
-    mul_mod_n_in_place, negate_mod_n_if, negate_mod_p_if_in_place, point_is_on_curve,
-    reduce_mod_n_32bytes_in_place, verify_last_step,
+    FGInteger, Montgomery, XYInteger, add_mod_n_in_place, add_sub_j, add_sub_j_affine,
+    decompress_point, divsteps2_31, double_j, double_j_inplace, jacobian_to_affine,
+    matrix_mul_fg_9, matrix_mul_mod_n, mul_mod_n, mul_mod_n_in_place, negate_mod_n_if,
+    negate_mod_p_if_in_place, point_is_on_curve, reduce_mod_n_32bytes_in_place, verify_last_step,
 };
 pub use crate::sys::{check_range_n, check_range_p};
 
@@ -726,27 +726,6 @@ pub fn verify(
         });
 
     verify_last_step(r, &cp)
-}
-
-#[repr(C)]
-#[derive(Default)]
-pub(crate) struct FGInteger {
-    // To get the value this struct represents,
-    // interpret signed_value as a two's complement 288-bit little endian integer,
-    // and negate if flip_sign is -1
-    flip_sign: i32, // 0 or -1
-    // of 288 bits, 257 are useful (top 31 bits are sign-extended from bit 256)
-    signed_value: [u32; 9],
-}
-
-#[repr(C)]
-#[derive(Default)]
-pub(crate) struct XYInteger {
-    // To get the value this struct represents,
-    // interpret signed_value as an unsigned 288-bit little endian integer,
-    // and negate if flip_sign is -1
-    flip_sign: i32,  // 0 or -1
-    value: [u32; 8], // unsigned value, 0 <= value < P256_order
 }
 
 #[repr(C)]
