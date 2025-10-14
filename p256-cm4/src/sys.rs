@@ -2,14 +2,12 @@
 #[cfg(target_arch = "arm")]
 mod asm;
 
+pub(crate) use crate::raw::{FGInteger, XYInteger};
 pub(crate) use asm::P256_ORDER;
 
 pub use asm::montgomery::Montgomery;
 
-use crate::{
-    FGInteger, XYInteger,
-    sys::asm::{P256_decompress_point, matrix::P256_divsteps2_31},
-};
+use crate::sys::asm::{P256_decompress_point, matrix::P256_divsteps2_31};
 
 impl Montgomery {
     /// Set the contents of `self` to the montgomery representation

@@ -1,7 +1,5 @@
 use core::arch::naked_asm;
 
-use crate::FGInteger;
-
 /// The elements of a matrix.
 ///
 /// These values are two's-complement encoded and in the range `[-2^30, 2^31]`.
@@ -35,8 +33,8 @@ struct MatrixElement(u32);
 pub(in crate::sys) unsafe extern "C" fn P256_matrix_mul_mod_n(
     a: u32,
     b: u32,
-    xy: *const [crate::XYInteger; 2],
-    out: *mut crate::XYInteger,
+    xy: *const [crate::sys::XYInteger; 2],
+    out: *mut crate::sys::XYInteger,
 ) {
     naked_asm!(
         "
@@ -327,8 +325,8 @@ pub(in crate::sys) unsafe extern "C" fn P256_divsteps2_31(
 pub(in crate::sys) unsafe extern "C" fn P256_matrix_mul_fg_9(
     a: u32,
     b: u32,
-    fg: *const [FGInteger; 2],
-    res: *mut FGInteger,
+    fg: *const [crate::sys::FGInteger; 2],
+    res: *mut crate::sys::FGInteger,
 ) {
     naked_asm!(
         "
