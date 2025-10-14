@@ -11,6 +11,8 @@ use sys::{
 };
 pub use sys::{check_range_n, check_range_p};
 
+use crate::sys::{FGInteger, XYInteger};
+
 // This table contains 1G, 3G, 5G, ... 15G in affine coordinates in montgomery form
 #[rustfmt::skip]
 static P256_BASEPOINT_PRECOMP: [[Montgomery; 2]; 8] = [
@@ -732,27 +734,6 @@ pub fn verify(
         });
 
     verify_last_step(r, &cp)
-}
-
-#[repr(C)]
-#[derive(Default)]
-struct FGInteger {
-    // To get the value this struct represents,
-    // interpret signed_value as a two's complement 288-bit little endian integer,
-    // and negate if flip_sign is -1
-    flip_sign: i32, // 0 or -1
-    // of 288 bits, 257 are useful (top 31 bits are sign-extended from bit 256)
-    signed_value: [u32; 9],
-}
-
-#[repr(C)]
-#[derive(Default)]
-struct XYInteger {
-    // To get the value this struct represents,
-    // interpret signed_value as an unsigned 288-bit little endian integer,
-    // and negate if flip_sign is -1
-    flip_sign: i32,  // 0 or -1
-    value: [u32; 8], // unsigned value, 0 <= value < P256_order
 }
 
 #[repr(C)]
