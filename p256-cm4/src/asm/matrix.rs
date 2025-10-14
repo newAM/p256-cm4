@@ -1,5 +1,26 @@
 use core::arch::naked_asm;
 
+#[repr(C)]
+#[derive(Default)]
+pub(crate) struct FGInteger {
+    // To get the value this struct represents,
+    // interpret signed_value as a two's complement 288-bit little endian integer,
+    // and negate if flip_sign is -1
+    pub flip_sign: i32, // 0 or -1
+    // of 288 bits, 257 are useful (top 31 bits are sign-extended from bit 256)
+    pub signed_value: [u32; 9],
+}
+
+#[repr(C)]
+#[derive(Default)]
+pub(crate) struct XYInteger {
+    // To get the value this struct represents,
+    // interpret signed_value as an unsigned 288-bit little endian integer,
+    // and negate if flip_sign is -1
+    pub flip_sign: i32,  // 0 or -1
+    pub value: [u32; 8], // unsigned value, 0 <= value < P256_order
+}
+
 /// The elements of a matrix.
 ///
 /// These values are two's-complement encoded and in the range `[-2^30, 2^31]`.
@@ -33,8 +54,8 @@ struct MatrixElement(u32);
 pub(in crate::sys) unsafe extern "C" fn P256_matrix_mul_mod_n(
     a: u32,
     b: u32,
-    xy: *const [crate::sys::XYInteger; 2],
-    out: *mut crate::sys::XYInteger,
+    xy: *const [XYInteger; 2],
+    out: *mut XYInteger,
 ) {
     naked_asm!(
         "
@@ -325,8 +346,8 @@ pub(in crate::sys) unsafe extern "C" fn P256_divsteps2_31(
 pub(in crate::sys) unsafe extern "C" fn P256_matrix_mul_fg_9(
     a: u32,
     b: u32,
-    fg: *const [crate::sys::FGInteger; 2],
-    res: *mut crate::sys::FGInteger,
+    fg: *const [FGInteger; 2],
+    res: *mut FGInteger,
 ) {
     naked_asm!(
         "

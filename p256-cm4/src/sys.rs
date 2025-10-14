@@ -2,8 +2,8 @@
 #[cfg(target_arch = "arm")]
 mod asm;
 
-pub(crate) use crate::raw::{FGInteger, XYInteger};
 pub(crate) use asm::P256_ORDER;
+pub(crate) use asm::matrix::{FGInteger, XYInteger};
 
 pub use asm::montgomery::Montgomery;
 
