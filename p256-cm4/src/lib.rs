@@ -1,7 +1,10 @@
 #![no_std]
 #![allow(clippy::missing_safety_doc)]
 
+mod new_api;
 mod sys;
+
+pub use new_api::*;
 
 use sys::{
     Montgomery, add_mod_n_in_place, add_sub_j, add_sub_j_affine, decompress_point, divsteps2_31,
@@ -662,6 +665,16 @@ pub fn verify(
         return false;
     }
 
+    verify_no_bounds_checks(public_key_x, public_key_y, hash, r, s)
+}
+
+pub(crate) fn verify_no_bounds_checks(
+    public_key_x: &[u32; 8],
+    public_key_y: &[u32; 8],
+    hash: &[u8],
+    r: &[u32; 8],
+    s: &[u32; 8],
+) -> bool {
     let mut pk_table = [[Montgomery::zero(); 3]; 8];
     pk_table[0][0].read(public_key_x);
     pk_table[0][1].read(public_key_y);
