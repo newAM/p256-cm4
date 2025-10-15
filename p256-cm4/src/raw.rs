@@ -654,6 +654,16 @@ pub fn verify(
         return false;
     }
 
+    verify_no_bounds_checks(public_key_x, public_key_y, hash, r, s)
+}
+
+pub(crate) fn verify_no_bounds_checks(
+    public_key_x: &[u32; 8],
+    public_key_y: &[u32; 8],
+    hash: &[u8],
+    r: &[u32; 8],
+    s: &[u32; 8],
+) -> bool {
     let mut pk_table = [[Montgomery::zero(); 3]; 8];
     pk_table[0][0].read(public_key_x);
     pk_table[0][1].read(public_key_y);
