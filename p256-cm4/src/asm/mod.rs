@@ -352,7 +352,12 @@ pub unsafe extern "C" fn P256_decompress_point(
 /// > **Note**: `r0` will be overriden during the execution of this function (it is callee-saved).
 #[unsafe(no_mangle)]
 #[unsafe(naked)]
-pub unsafe extern "C" fn P256_negate_mod_m_if() {
+pub unsafe extern "C" fn P256_negate_mod_m_if(
+    output: *mut [u32; 8],
+    a: *const [u32; 8],
+    should_negate: u32,
+    m: *const [u32; 8],
+) {
     naked_asm!(
         "
                 push {r4-r8, lr}
