@@ -69,12 +69,10 @@ pub(crate) static P256_PRIME: [u32; 8] =
 /// # Return
 /// On return, `r0` will contain `1` if `xy` is on the `p256` curve. Otherwise, `r0` will contain `0`.
 ///
-/// All other registers are clobbered.
+/// # SAFETY
+/// The caller must guarantee that `x` and `y` are valid.
 ///
-/// # Safety
-/// The caller must ensure that the ABI for this function is upheld. It is impossible to do so from
-/// normal rust code, so it must only be called from other inline assembly.
-// TODO: make this `extern "custom"` once that is stabilized (https://github.com/rust-lang/rust/issues/140829)
+/// This function adheres to the ARM calling convention.
 #[unsafe(no_mangle)]
 #[unsafe(link_section = ".p256-cortex-m4")]
 #[unsafe(naked)]
