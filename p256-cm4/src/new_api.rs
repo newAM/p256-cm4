@@ -10,6 +10,20 @@ pub enum VerifyingKeyError {
     NotOnCurve,
 }
 
+#[cfg_attr(feature = "defmt", derive(defmt::Format))]
+#[derive(Debug, Clone, PartialEq)]
+pub enum VerifyingKeySec1Error {
+    /// An error occurred with the key that was decoded.
+    Key(VerifyingKeyError),
+    /// The provided amount of data was too small and could
+    /// not be decoded.
+    TooLittleData,
+    /// The provided data had an invalid `sec1` tag.
+    InvalidTag,
+    /// The parity data did not match.
+    InvalidParity,
+}
+
 /// A verifying key, also called a public key.
 #[cfg_attr(feature = "defmt", derive(defmt::Format))]
 #[derive(Debug, Clone, PartialEq)]
@@ -19,12 +33,21 @@ pub struct VerifyingKey {
 }
 
 impl VerifyingKey {
+    fn from_parts_valid_range(x: [u32; 8], y: [u32; 8]) -> Result<Self, VerifyingKeyError> {
+        let x_mont = Montgomery::from(x);
+        let y_mont = Montgomery::from(y);
+
+        sys::point_is_on_curve(&x_mont, &y_mont)
+            .then_some(Self { x, y })
+            .ok_or(VerifyingKeyError::NotOnCurve)
+    }
+
     /// Create a new [`VerifyingKey`] from the provided raw, big-endian encoded
     /// `x` and `y` coordinates.
     ///
     /// An error is returned if `x` or `y` is not in the range `0..=p - 1`, where `p`
     /// is the `p256` prime, or if the point `(x, y)` is not on the `p256` curve.
-    pub fn from_parts(x: &[u8; 32], y: &[u8; 32]) -> Result<VerifyingKey, VerifyingKeyError> {
+    pub fn from_parts(x: &[u8; 32], y: &[u8; 32]) -> Result<Self, VerifyingKeyError> {
         let x = to_little_endian(x);
         let y = to_little_endian(y);
 
@@ -44,6 +67,91 @@ impl VerifyingKey {
     /// `signature` by signing `hash`.
     pub fn verify_prehash(&self, hash: &[u8; 32], signature: &Signature) -> bool {
         verify_no_bounds_checks(&self.x, &self.y, hash, &signature.r, &signature.s)
+    }
+
+    /// Convert this [`VerifyingKey`] to its [`sec1`] representation (uncompressed).
+    ///
+    /// [`sec1`]: https://docs.rs/sec1/latest/sec1/
+    pub fn to_sec1_bytes(&self) -> [u8; 65] {
+        let mut output = [0u8; 65];
+        output[0] = 4;
+        to_big_endian(&self.x, (&mut output[1..33]).try_into().unwrap());
+        to_big_endian(&self.y, (&mut output[33..65]).try_into().unwrap());
+        output
+    }
+
+    /// Convert this [`VerifyingKey`] to its [`sec1`] representation (compressed).
+    ///
+    /// [`sec1`]: https://docs.rs/sec1/latest/sec1/
+    pub fn to_sec1_bytes_compressed(&self) -> [u8; 33] {
+        let mut output = [0u8; 33];
+        to_big_endian(&self.x, (&mut output[1..33]).try_into().unwrap());
+        output[0] = if self.y[0] & 0x1 == 0x1 { 3 } else { 2 };
+        output
+    }
+
+    /// Parse the provided `data` as [`sec1`] bytes and return the
+    /// result if it constitutes a valid [`VerifyingKey`] (see
+    /// [`VerifyingKey::from_parts`] for more information on validity).
+    ///
+    /// This implementation supports the uncompressed (`0x04`), hybrid (`0x06`, `0x07`),
+    /// and compressed (`0x03`, `0x04`) forms. The compact form (`0x05`) is not supported.
+    ///
+    /// [`sec1`]: https://docs.rs/sec1/latest/sec1/
+    pub fn from_sec1_bytes(data: &[u8]) -> Result<Self, VerifyingKeySec1Error> {
+        let (tag, xy) = data
+            .split_at_checked(1)
+            .ok_or(VerifyingKeySec1Error::TooLittleData)?;
+
+        let tag = tag[0];
+
+        let (x, y) = xy
+            .split_at_checked(32)
+            .ok_or(VerifyingKeySec1Error::TooLittleData)?;
+
+        let x: &[u8; 32] = x.try_into().unwrap();
+
+        if tag == 4 || tag == 6 || tag == 7 {
+            let y: &[u8; 32] = y
+                .try_into()
+                .map_err(|_| VerifyingKeySec1Error::TooLittleData)?;
+
+            if tag == 6 || tag == 7 {
+                let expected_parity = tag & 0x1;
+                let parity = y[31] & 0x1;
+
+                if expected_parity != parity {
+                    return Err(VerifyingKeySec1Error::InvalidParity);
+                }
+            }
+
+            Self::from_parts(x, y).map_err(VerifyingKeySec1Error::Key)
+        } else if tag == 2 || tag == 3 {
+            let x = to_little_endian(x);
+            let mut y = [0u32; 8];
+
+            let valid = sys::decompress_point(&mut y, &x, (u32::from(tag) & 0x1) == 1);
+
+            if valid {
+                Self::from_parts_valid_range(x, y).map_err(VerifyingKeySec1Error::Key)
+            } else {
+                Err(VerifyingKeySec1Error::Key(VerifyingKeyError::OutOfRange))
+            }
+        } else {
+            Err(VerifyingKeySec1Error::InvalidTag)
+        }
+    }
+
+    /// Convert this [`VerifyingKey`] into a tuple of little-endian integers
+    /// describing the `x` and `y` coordinates.
+    pub fn to_bytes(&self) -> ([u8; 32], [u8; 32]) {
+        let mut x = [0u8; 32];
+        let mut y = [0u8; 32];
+
+        to_big_endian(&self.x, &mut x);
+        to_big_endian(&self.y, &mut y);
+
+        (x, y)
     }
 }
 
@@ -97,4 +205,20 @@ fn to_little_endian(input: &[u8; 32]) -> [u32; 8] {
     }
 
     output
+}
+
+/// Convert an input 256 bit number (little-endian u32s) into the format
+/// used by `sec1` (big-endian u8s)
+fn to_big_endian(input: &[u32; 8], output: &mut [u8; 32]) {
+    let input_ref = transmute(input);
+    crate::convert_endianness(output, input_ref);
+
+    fn transmute(input: &[u32; 8]) -> &[u8; 32] {
+        // SAFETY: we return a mutable reference with the same lifetime
+        // as the input pointer. Additionally, all bit patterns for the
+        // provided `[u32]` are valid for the returned `[u8]`, and the
+        // alignment requirements for an `&mut [u8; 32]` are laxer than
+        // those of a `&mut [u32; 8]`.
+        unsafe { core::mem::transmute(input) }
+    }
 }

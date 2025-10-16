@@ -151,4 +151,132 @@ mod tests {
         let authentic = key.verify_prehash(&hash, &signature);
         defmt::assert!(!authentic);
     }
+
+    #[test]
+    fn sec1_roundtrip() {
+        let mut key: [u8; 65] = [0; 65];
+        key[0] = 0x04;
+        key[1..33].copy_from_slice(&CURVE_PT_X);
+        key[33..65].copy_from_slice(&CURVE_PT_Y);
+
+        let verifying_key = VerifyingKey::from_sec1_bytes(&key).unwrap();
+
+        let encoded = verifying_key.to_sec1_bytes();
+
+        defmt::assert_eq!(key, encoded);
+    }
+
+    #[test]
+    fn sec1_compressed_roundtrip_odd_parity() {
+        let mut key = [0; 33];
+        key[0] = 0x03;
+        key[1..33].copy_from_slice(&CURVE_PT_X);
+
+        let verifying_key = VerifyingKey::from_sec1_bytes(&key).unwrap();
+        let (_, y) = verifying_key.to_bytes();
+
+        let encoded = verifying_key.to_sec1_bytes_compressed();
+
+        defmt::assert_eq!(key, encoded);
+        defmt::assert_eq!(&y, &CURVE_PT_Y);
+    }
+
+    #[test]
+    fn sec1_compressed_roundtrip_even_parity() {
+        let mut key = [0; 33];
+        key[0] = 0x02;
+        key[1..33].copy_from_slice(&CURVE_PT_X);
+
+        let verifying_key = VerifyingKey::from_sec1_bytes(&key).unwrap();
+        let (_, y) = verifying_key.to_bytes();
+
+        // Expected y coordinate when decoding `x` as compressed point with
+        // odd parity.
+        let expected_y = [
+            0x31, 0xBF, 0xEB, 0x38, 0x77, 0xEE, 0x06, 0x5E, 0xE5, 0xE0, 0x24, 0xD3, 0xF1, 0x9E,
+            0xEC, 0x1F, 0x92, 0x48, 0x35, 0x6D, 0x48, 0xBF, 0xB1, 0x87, 0x23, 0x83, 0x32, 0xA3,
+            0x57, 0x65, 0xB3, 0x56,
+        ];
+
+        let encoded = verifying_key.to_sec1_bytes_compressed();
+
+        defmt::assert_eq!(key, encoded);
+        defmt::assert_eq!(y, expected_y)
+    }
+
+    #[test]
+    fn sec1_hybrid_odd() {
+        let mut key = [0; 65];
+        key[0] = 0x07;
+        key[1..33].copy_from_slice(&CURVE_PT_X);
+        key[33..65].copy_from_slice(&CURVE_PT_Y);
+
+        let verifying_key = VerifyingKey::from_sec1_bytes(&key).unwrap();
+        let (_, y) = verifying_key.to_bytes();
+
+        defmt::assert_eq!(&y, &CURVE_PT_Y);
+    }
+
+    #[test]
+    fn sec1_hybrid_even() {
+        // Expected y coordinate at `x` with odd parity.
+        let expected_y = [
+            0x31, 0xBF, 0xEB, 0x38, 0x77, 0xEE, 0x06, 0x5E, 0xE5, 0xE0, 0x24, 0xD3, 0xF1, 0x9E,
+            0xEC, 0x1F, 0x92, 0x48, 0x35, 0x6D, 0x48, 0xBF, 0xB1, 0x87, 0x23, 0x83, 0x32, 0xA3,
+            0x57, 0x65, 0xB3, 0x56,
+        ];
+
+        let mut key = [0; 65];
+        key[0] = 0x06;
+        key[1..33].copy_from_slice(&CURVE_PT_X);
+        key[33..65].copy_from_slice(&expected_y);
+
+        let verifying_key = VerifyingKey::from_sec1_bytes(&key).unwrap();
+        let (_, y) = verifying_key.to_bytes();
+
+        defmt::assert_eq!(&y, &expected_y);
+    }
+
+    #[test]
+    fn sec1_empty() {
+        defmt::assert_eq!(
+            VerifyingKey::from_sec1_bytes(&[]),
+            Err(p256_cm4::VerifyingKeySec1Error::TooLittleData)
+        );
+    }
+
+    #[test]
+    fn sec1_uncompressed_too_little_data_x() {
+        let data = [0x04; 32];
+        defmt::assert_eq!(
+            VerifyingKey::from_sec1_bytes(&data),
+            Err(p256_cm4::VerifyingKeySec1Error::TooLittleData)
+        );
+    }
+    #[test]
+    fn sec1_uncompressed_too_little_data_y() {
+        let data = [0x04; 64];
+        defmt::assert_eq!(
+            VerifyingKey::from_sec1_bytes(&data),
+            Err(p256_cm4::VerifyingKeySec1Error::TooLittleData)
+        );
+    }
+
+    #[test]
+    fn sec1_too_little_data_x() {
+        let data = [0x06; 32];
+        defmt::assert_eq!(
+            VerifyingKey::from_sec1_bytes(&data),
+            Err(p256_cm4::VerifyingKeySec1Error::TooLittleData)
+        );
+    }
+
+    #[test]
+    fn sec1_too_little_data_y() {
+        let data = [0x06; 33];
+        defmt::assert_eq!(
+            VerifyingKey::from_sec1_bytes(&data),
+            Err(p256_cm4::VerifyingKeySec1Error::TooLittleData)
+        );
+    }
 }
