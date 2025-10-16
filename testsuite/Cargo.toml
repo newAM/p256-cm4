@@ -25,7 +25,7 @@ defmt-rtt = { version = "1.1.0", optional = true }
 defmt-semihosting = "0.3"
 defmt-test = "0.4"
 hex-literal = "1.0.0"
-p256-cm4 = { path = "../p256-cm4", features = [ "defmt" ] }
+p256-cm4 = { path = "../p256-cm4", features = [ "defmt", "p256" ] }
 
 [features]
 # Use RTT instead of semihosting for logs

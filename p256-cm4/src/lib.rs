@@ -4,6 +4,9 @@
 mod new_api;
 mod sys;
 
+#[cfg(feature = "p256")]
+mod p256;
+
 pub use new_api::*;
 
 use sys::{
