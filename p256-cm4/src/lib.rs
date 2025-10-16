@@ -4,6 +4,9 @@
 mod raw;
 mod sys;
 
+#[cfg(feature = "p256")]
+mod p256;
+
 pub use raw::*;
 
 use crate::sys::Montgomery;
@@ -217,15 +220,9 @@ fn to_little_endian(input: &[u8; 32]) -> [u32; 8] {
 /// Convert an input 256 bit number (little-endian u32s) into the format
 /// used by `sec1` (big-endian u8s)
 fn to_big_endian(input: &[u32; 8], output: &mut [u8; 32]) {
-    let input_ref = transmute(input);
-    convert_endianness(output, input_ref);
-
-    fn transmute(input: &[u32; 8]) -> &[u8; 32] {
-        // SAFETY: we return a mutable reference with the same lifetime
-        // as the input pointer. Additionally, all bit patterns for the
-        // provided `[u32]` are valid for the returned `[u8]`, and the
-        // alignment requirements for an `&mut [u8; 32]` are laxer than
-        // those of a `&mut [u32; 8]`.
-        unsafe { core::mem::transmute(input) }
+    for (idx, value) in input.iter().enumerate() {
+        let start = output.len() - (idx + 1) * 4;
+        let end = output.len() - (idx * 4);
+        output[start..end].copy_from_slice(&value.to_be_bytes());
     }
 }
