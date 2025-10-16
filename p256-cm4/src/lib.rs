@@ -204,13 +204,7 @@ pub fn octet_string_to_point(x: &mut [u32; 8], y: &mut [u32; 8], input: &[u8]) -
             unsafe { P256_to_montgomery(&raw mut y_mont as _, y) };
             unsafe { P256_point_is_on_curve(&raw const x_mont as _, &raw const y_mont as _) }
         } else if (input[0] >> 1) == 1 && input.len() == 33 {
-            unsafe {
-                P256_decompress_point(
-                    &raw mut *y as _,
-                    &raw const *x as _,
-                    u32::from(input[0] & 1),
-                )
-            }
+            unsafe { P256_decompress_point(y, x, u32::from(input[0] & 1)) }
         } else {
             false
         }
