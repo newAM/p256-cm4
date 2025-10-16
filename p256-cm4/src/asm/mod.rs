@@ -239,12 +239,32 @@ pub unsafe extern "C" fn P256_sqrmod_many_and_mulmod() {
     )
 }
 
+/// Decompress a point.
+///
+/// # Inputs
+///
+/// `r0` shall contain `y`, a valid `*mut [u32; 8]`.
+///
+/// `r1` shall contain `x`, a valid `*const [u8; 32]`.
+///
+/// `r2` shall contain `parity`, a `u32` that is either 0 or 1.
+///
+/// # Return
+/// `r0` will contain `1` if the input `x` and `parity` combination produced a valid point, and `0` otherwise.
+///
+/// The location pointed to by the input `r0` will contain the output `y` coordinate.
+///
+///
+/// # SAFETY
+/// The caller must guarantee that `x` and `y` are valid.
+///
+/// This function adheres to the ARM calling convention.
 #[unsafe(no_mangle)]
 #[unsafe(link_section = ".p256-cortex-m4")]
 #[unsafe(naked)]
 pub unsafe extern "C" fn P256_decompress_point(
-    y: *const Montgomery,
-    x: *const Montgomery,
+    y: *mut [u32; 8],
+    x: *const [u32; 8],
     parity: u32,
 ) -> bool {
     naked_asm!(
