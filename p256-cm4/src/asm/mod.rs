@@ -56,6 +56,13 @@ pub(crate) static P256_B: [u32; 8] = [
 /// Code that relies on this static being fewer than 4096 bytes away
 /// must be in the same `.p256-cortex-m4` section.
 #[unsafe(link_section = ".p256-cortex-m4")]
+pub(crate) static P256_THREE: [u32; 8] = [
+    0x3, 0x0, 0x0, 0xfffffffd, 0xffffffff, 0xffffffff, 0xfffffffc, 0x2,
+];
+
+/// Code that relies on this static being fewer than 4096 bytes away
+/// must be in the same `.p256-cortex-m4` section.
+#[unsafe(link_section = ".p256-cortex-m4")]
 pub(crate) static P256_PRIME: [u32; 8] =
     [0xffffffff, 0xffffffff, 0xffffffff, 0, 0, 0, 1, 0xffffffff];
 
@@ -283,7 +290,7 @@ pub unsafe extern "C" fn P256_decompress_point(
             push {{r0-r7}}
 
             mov r1, sp
-            adr r2, {P256_B}
+            adr r2, {P256_THREE}
             bl {P256_submod}
             stm sp, {{r0-r7}}
             // frame address sp, 108
@@ -349,6 +356,7 @@ pub unsafe extern "C" fn P256_decompress_point(
         P256_negate_mod_m_if = sym P256_negate_mod_m_if,
         P256_modinv_sqrt = sym P256_modinv_sqrt,
         P256_B = sym P256_B,
+        P256_THREE = sym P256_THREE,
         P256_PRIME = sym P256_PRIME,
     )
 }
