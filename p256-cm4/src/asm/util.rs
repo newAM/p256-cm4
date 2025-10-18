@@ -135,10 +135,15 @@ pub unsafe extern "C" fn add_sub_helper() {
 ///
 /// # Return
 /// On return, `r0` will contain `1` if `a` was in the range, and `0` otherwise.
+///
+/// # Safety
+/// The caller must guarantee that `a` is valid for the duration of the function call.
+///
+/// > **Note**: This function adheres to the ARM calling convention.
 #[unsafe(naked)]
 #[unsafe(no_mangle)]
 #[unsafe(link_section = ".p256-cortex-m4")]
-pub unsafe extern "C" fn P256_check_range_n(a: *const [u32; 8]) -> bool {
+pub(in crate::sys) unsafe extern "C" fn P256_check_range_n(a: *const [u32; 8]) -> bool {
     naked_asm!(
         "
             push {{r4-r11, lr}}

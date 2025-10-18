@@ -4,12 +4,14 @@
 mod sys;
 
 use crate::sys::asm::{
-    P256_add_mod_n, P256_check_range_n, P256_check_range_p, P256_decompress_point,
-    P256_divsteps2_31, P256_double_j, P256_from_montgomery, P256_matrix_mul_fg_9, P256_mul_mod_n,
-    P256_negate_mod_n_if, P256_negate_mod_p_if, P256_point_is_on_curve, P256_reduce_mod_n_32bytes,
-    P256_to_montgomery, P256_verify_last_step,
+    P256_add_mod_n, P256_check_range_p, P256_decompress_point, P256_divsteps2_31, P256_double_j,
+    P256_from_montgomery, P256_matrix_mul_fg_9, P256_mul_mod_n, P256_negate_mod_n_if,
+    P256_negate_mod_p_if, P256_point_is_on_curve, P256_reduce_mod_n_32bytes, P256_to_montgomery,
+    P256_verify_last_step,
     jacobian::{P256_add_sub_j, P256_jacobian_to_affine},
 };
+
+pub use sys::check_range_n;
 
 const ONE_MONTGOMERY: [u32; 8] = [1, 0, 0, 0xffffffff, 0xffffffff, 0xffffffff, 0xfffffffe, 0];
 
@@ -97,17 +99,6 @@ fn abs_int(a: i8) -> u32 {
     let mut result: u32 = ((-a) as u32) & mask;
     result |= (a as u32) & (mask ^ 0xF);
     result
-}
-
-/// Checks that the argument, as little-endian integer,
-/// is a reduced non-zero element of the scalar field.
-///
-/// In other words, that it is in the range `1..=n-1`,
-/// where `n = 2^256 - 2^224 + 2^192 - 0x4319055258e8617b0c46353d039cdaaf`.
-#[inline]
-#[must_use]
-pub fn check_range_n(a: &[u32; 8]) -> bool {
-    unsafe { P256_check_range_n(a) }
 }
 
 /// Checks that the argument, as little-endian integer,
@@ -347,10 +338,9 @@ pub fn scalarmult_generic(
     in_x: &[u32; 8],
     in_y: &[u32; 8],
 ) -> bool {
-    if unsafe {
-        !P256_check_range_n(scalar)
-            || !scalarmult_generic_no_scalar_check(result_x, result_y, scalar, in_x, in_y)
-    } {
+    if !check_range_n(scalar)
+        || !scalarmult_generic_no_scalar_check(result_x, result_y, scalar, in_x, in_y)
+    {
         false
     } else {
         unsafe { P256_from_montgomery(result_x, &raw const *result_x as _) };
@@ -513,7 +503,7 @@ pub fn scalarmult_base(
     result_y: &mut [u32; 8],
     scalar: &[u32; 8],
 ) -> bool {
-    if unsafe { !P256_check_range_n(scalar) } {
+    if check_range_n(scalar) {
         false
     } else {
         scalarmult_fixed_base(result_x, result_y, scalar);
@@ -590,7 +580,7 @@ pub fn sign(
 pub fn sign_step1(result: &mut SignPrecomp, k: &[u32; 8]) -> bool {
     #[allow(clippy::never_loop)]
     loop {
-        if unsafe { !P256_check_range_n(k) } {
+        if !check_range_n(k) {
             break;
         }
         let mut output_x: [u32; 8] = [0; 8];
@@ -646,9 +636,7 @@ pub fn sign_step2(
     #[allow(clippy::never_loop)]
     loop {
         // just make sure user did not input an obviously invalid precomp
-        if unsafe {
-            !P256_check_range_n(&sign_precomp.k_inv) || !P256_check_range_n(&sign_precomp.r)
-        } {
+        if !check_range_n(&sign_precomp.k_inv) || !check_range_n(&sign_precomp.r) {
             break;
         }
         hash_to_z(u32x8_to_u8x32_mut(r), hash);
@@ -725,7 +713,7 @@ pub fn verify(
     r: &[u32; 8],
     s: &[u32; 8],
 ) -> bool {
-    if unsafe { !P256_check_range_n(r) || !P256_check_range_n(s) } {
+    if !check_range_n(r) || !check_range_n(s) {
         return false;
     }
 
