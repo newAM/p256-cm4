@@ -5,11 +5,12 @@ mod sys;
 
 use crate::sys::asm::{
     P256_add_mod_n, P256_decompress_point, P256_divsteps2_31, P256_double_j, P256_from_montgomery,
-    P256_matrix_mul_fg_9, P256_mul_mod_n, P256_negate_mod_n_if, P256_negate_mod_p_if,
-    P256_point_is_on_curve, P256_reduce_mod_n_32bytes, P256_to_montgomery, P256_verify_last_step,
+    P256_matrix_mul_fg_9, P256_mul_mod_n, P256_negate_mod_p_if, P256_point_is_on_curve,
+    P256_reduce_mod_n_32bytes, P256_to_montgomery, P256_verify_last_step,
     jacobian::{P256_add_sub_j, P256_jacobian_to_affine},
 };
 
+use sys::negate_mod_n_if;
 pub use sys::{check_range_n, check_range_p};
 
 const ONE_MONTGOMERY: [u32; 8] = [1, 0, 0, 0xffffffff, 0xffffffff, 0xffffffff, 0xfffffffe, 0];
@@ -201,8 +202,8 @@ fn scalarmult_variable_base(
 
     // The algorithm used requires the scalar to be odd. If even, negate the scalar modulo p to make it odd, and later negate the end result.
     let mut scalar2: [u32; 8] = [0; 8];
-    let even: u32 = ((scalar[0]) & 1) ^ 1;
-    unsafe { P256_negate_mod_n_if(&mut scalar2, scalar, even) };
+    let even = ((scalar[0]) & 1) == 0;
+    negate_mod_n_if(&mut scalar2, scalar, even);
 
     // Rewrite the scalar as e[0] + 2^4*e[1] + 2^8*e[2] + ... + 2^252*e[63], where each e[i] is an odd number and -15 <= e[i] <= 15.
     let mut e: [i8; 64] = [0; 64];
@@ -280,7 +281,7 @@ fn scalarmult_variable_base(
 
     // If the scalar was initially even, we now negate the result to get the correct result, since -(scalar*G) = (-scalar*G).
     // This is done by negating y, since -(x,y) = (x,-y).
-    unsafe { P256_negate_mod_p_if(output_mont_y, output_mont_y, even) };
+    unsafe { P256_negate_mod_p_if(output_mont_y, output_mont_y, even as u32) };
 }
 
 #[must_use]
@@ -406,8 +407,8 @@ fn scalarmult_fixed_base(
     let mut scalar2: [u32; 8] = [0; 8];
 
     // Just as with the algorithm used in variable base scalar multiplication, this algorithm requires the scalar to be odd.
-    let even: u32 = ((scalar[0]) & 1) ^ 1;
-    unsafe { P256_negate_mod_n_if(&mut scalar2, scalar, even) };
+    let even = ((scalar[0]) & 1) == 0;
+    negate_mod_n_if(&mut scalar2, scalar, even);
 
     // This algorithm conceptually rewrites the odd scalar as s[0] + 2^1*s[1] + 2^2*s[2] + ... + 2^255*s[255], where each s[i] is -1 or 1.
     // By initially setting s[i] to the corresponding bit S[i] in the original odd scalar S, we go from lsb to msb, and whenever a value s[i] is 0,
@@ -476,7 +477,7 @@ fn scalarmult_fixed_base(
     };
 
     // Negate final result if the scalar was initially even.
-    unsafe { P256_negate_mod_p_if(output_mont_y, output_mont_y, even) };
+    unsafe { P256_negate_mod_p_if(output_mont_y, output_mont_y, even as u32) };
 }
 
 /// Raw scalar multiplication by the base point of the elliptic curve.
@@ -908,14 +909,13 @@ fn mod_n_inv(res: &mut [u32; 8], a: &[u32; 8]) {
 
     // Calculates val^-1 = sgn(f) * v * 2^-744, where v is the "top-right corner" of the resulting T24*T23*...*T1 matrix.
     // In this implementation, at this point x contains v * 2^-744.
-    unsafe {
-        P256_negate_mod_n_if(
-            res,
-            &state[0].xy[0].value,
-            ((state[0].xy[0].flip_sign
-                ^ state[0].fg[0].flip_sign
-                ^ (state[0].fg[0].signed_value[8] as i32))
-                & 1) as u32,
-        )
-    };
+    negate_mod_n_if(
+        res,
+        &state[0].xy[0].value,
+        ((state[0].xy[0].flip_sign
+            ^ state[0].fg[0].flip_sign
+            ^ (state[0].fg[0].signed_value[8] as i32))
+            & 1)
+            == 1,
+    );
 }

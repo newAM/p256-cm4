@@ -266,10 +266,16 @@ pub unsafe extern "C" fn setzero() {
 /// On return, the dereference of the input value of `r0` shall contain the result of the computation.
 ///
 /// > **Note**: `r0` will be overriden during the execution of this function (it is callee-saved).
+///
+/// # Safety
+/// The caller must guarantee that `out` and `inn` are valid for the duration of the function
+/// call, and that `inn` is valid for writes.
+///
+/// > **Note**: This function adheres to the ARM calling convention.
 #[unsafe(naked)]
 #[unsafe(no_mangle)]
 #[unsafe(link_section = ".p256-cortex-m4")]
-pub unsafe extern "C" fn P256_negate_mod_n_if(
+pub(in crate::sys) unsafe extern "C" fn P256_negate_mod_n_if(
     out: *mut [u32; 8],
     inn: *const [u32; 8],
     should_negate: u32,

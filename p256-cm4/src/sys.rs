@@ -25,3 +25,10 @@ pub fn check_range_p(a: &[u32; 8]) -> bool {
     // SAFETY: `a` is valid for the duration of the call.
     unsafe { asm::P256_check_range_p(a) }
 }
+
+#[inline(always)]
+pub(crate) fn negate_mod_n_if(out: &mut [u32; 8], inn: &[u32; 8], should_negate: bool) {
+    // SAFETY: `out` and `inn` are valid for the duration of the call,
+    // and `out` is valid for writes.
+    unsafe { asm::P256_negate_mod_n_if(out, inn, should_negate as u32) };
+}
