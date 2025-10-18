@@ -125,3 +125,9 @@ pub fn jacobian_to_affine(x: &mut Montgomery, y: &mut Montgomery, jacobian: &[Mo
     // `x` and `y` are valid for writes.
     unsafe { asm::jacobian::P256_jacobian_to_affine(x, y, jacobian) };
 }
+
+#[inline(always)]
+pub fn point_is_on_curve(x: &Montgomery, y: &Montgomery) -> bool {
+    // SAFETY: `x` and `y` are valid for the duration of the function call.
+    unsafe { asm::P256_point_is_on_curve(x, y) }
+}

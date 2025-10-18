@@ -5,12 +5,12 @@ mod sys;
 
 use crate::sys::asm::{
     P256_add_mod_n, P256_decompress_point, P256_divsteps2_31, P256_matrix_mul_fg_9, P256_mul_mod_n,
-    P256_negate_mod_p_if, P256_point_is_on_curve, P256_reduce_mod_n_32bytes, P256_verify_last_step,
+    P256_negate_mod_p_if, P256_reduce_mod_n_32bytes, P256_verify_last_step,
 };
 
 use sys::{
     Montgomery, add_sub_j, add_sub_j_affine, double_j, double_j_inplace, jacobian_to_affine,
-    negate_mod_n_if,
+    negate_mod_n_if, point_is_on_curve,
 };
 pub use sys::{check_range_n, check_range_p};
 
@@ -175,10 +175,10 @@ pub fn octet_string_to_point(x: &mut [u32; 8], y: &mut [u32; 8], input: &[u8]) -
                 return false;
             }
 
-            let x_mont = (*x).into();
-            let y_mont = (*y).into();
+            let x = Montgomery::from(*x);
+            let y = Montgomery::from(*y);
 
-            unsafe { P256_point_is_on_curve(&x_mont, &y_mont) }
+            point_is_on_curve(&x, &y)
         } else if (input[0] >> 1) == 1 && input.len() == 33 {
             unsafe { P256_decompress_point(y, x, u32::from(input[0] & 1)) }
         } else {
@@ -276,7 +276,7 @@ fn scalarmult_generic_no_scalar_check(
         output_mont_x.read(in_x);
         output_mont_y.read(in_y);
 
-        if unsafe { !P256_point_is_on_curve(output_mont_x, output_mont_y) } {
+        if !point_is_on_curve(output_mont_x, output_mont_y) {
             false
         } else {
             scalarmult_variable_base(output_mont_x, output_mont_y, scalar);
@@ -681,12 +681,7 @@ pub fn verify(
     pk_table[0][1].read(public_key_y);
     pk_table[0][2] = Montgomery::one();
 
-    if unsafe {
-        !P256_point_is_on_curve(
-            &raw const pk_table[0][0] as _,
-            &raw const pk_table[0][1] as _,
-        )
-    } {
+    if !point_is_on_curve(&pk_table[0][0], &pk_table[0][1]) {
         return false;
     }
 

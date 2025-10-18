@@ -75,13 +75,13 @@ pub(crate) static P256_PRIME: [u32; 8] =
 /// On return, `r0` will contain `1` if `xy` is on the `p256` curve. Otherwise, `r0` will contain `0`.
 ///
 /// # SAFETY
-/// The caller must guarantee that `x` and `y` are valid.
+/// The caller must guarantee that `x` and `y` are valid for the duration of the function call.
 ///
-/// This function adheres to the ARM calling convention.
+/// > **Note**: This function adheres to the ARM calling convention.
 #[unsafe(no_mangle)]
 #[unsafe(link_section = ".p256-cortex-m4")]
 #[unsafe(naked)]
-pub unsafe extern "C" fn P256_point_is_on_curve(
+pub(in crate::sys) unsafe extern "C" fn P256_point_is_on_curve(
     x: *const Montgomery,
     y: *const Montgomery,
 ) -> bool {
