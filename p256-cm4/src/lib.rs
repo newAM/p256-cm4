@@ -4,14 +4,13 @@
 mod sys;
 
 use crate::sys::asm::{
-    P256_add_mod_n, P256_check_range_p, P256_decompress_point, P256_divsteps2_31, P256_double_j,
-    P256_from_montgomery, P256_matrix_mul_fg_9, P256_mul_mod_n, P256_negate_mod_n_if,
-    P256_negate_mod_p_if, P256_point_is_on_curve, P256_reduce_mod_n_32bytes, P256_to_montgomery,
-    P256_verify_last_step,
+    P256_add_mod_n, P256_decompress_point, P256_divsteps2_31, P256_double_j, P256_from_montgomery,
+    P256_matrix_mul_fg_9, P256_mul_mod_n, P256_negate_mod_n_if, P256_negate_mod_p_if,
+    P256_point_is_on_curve, P256_reduce_mod_n_32bytes, P256_to_montgomery, P256_verify_last_step,
     jacobian::{P256_add_sub_j, P256_jacobian_to_affine},
 };
 
-pub use sys::check_range_n;
+pub use sys::{check_range_n, check_range_p};
 
 const ONE_MONTGOMERY: [u32; 8] = [1, 0, 0, 0xffffffff, 0xffffffff, 0xffffffff, 0xfffffffe, 0];
 
@@ -101,17 +100,6 @@ fn abs_int(a: i8) -> u32 {
     result
 }
 
-/// Checks that the argument, as little-endian integer,
-/// is a reduced element of the base field.
-///
-/// In other words, that it is in the range `0..=p-1`,
-/// where `p = 2^256 - 2^224 + 2^192 + 2^96 - 1`.
-#[inline]
-#[must_use]
-pub fn check_range_p(a: &[u32; 8]) -> bool {
-    unsafe { P256_check_range_p(a) }
-}
-
 /// Converts endianness by reversing the input value.
 ///
 /// The output and input pointers may NOT refer to the same location
@@ -173,13 +161,13 @@ pub fn point_to_octet_string_hybrid(out: &mut [u8; 65], x: &[u32; 8], y: &[u32; 
 pub fn octet_string_to_point(x: &mut [u32; 8], y: &mut [u32; 8], input: &[u8]) -> bool {
     if let Ok(slice) = input[1..33].try_into() {
         convert_endianness(u32x8_to_u8x32_mut(x), slice);
-        if unsafe { !P256_check_range_p(x) } {
+        if !check_range_p(x) {
             return false;
         }
 
         if (input[0] == 4 || ((input[0] >> 1) == 3)) && input.len() == 65 {
             convert_endianness(u32x8_to_u8x32_mut(y), input[33..65].try_into().unwrap());
-            if unsafe { !P256_check_range_p(y) } {
+            if !check_range_p(y) {
                 return false;
             }
 
@@ -303,7 +291,7 @@ fn scalarmult_generic_no_scalar_check(
     in_x: &[u32; 8],
     in_y: &[u32; 8],
 ) -> bool {
-    if unsafe { !P256_check_range_p(in_x) || !P256_check_range_p(in_y) } {
+    if !check_range_p(in_x) || !check_range_p(in_y) {
         false
     } else {
         unsafe { P256_to_montgomery(&raw mut *output_mont_x as _, in_x) };
@@ -717,7 +705,7 @@ pub fn verify(
         return false;
     }
 
-    if unsafe { !P256_check_range_p(public_key_x) || !P256_check_range_p(public_key_y) } {
+    if !check_range_p(public_key_x) || !check_range_p(public_key_y) {
         return false;
     }
 
