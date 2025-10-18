@@ -89,3 +89,17 @@ pub(crate) fn negate_mod_n_if(out: &mut [u32; 8], inn: &[u32; 8], should_negate:
     // and `out` is valid for writes.
     unsafe { asm::P256_negate_mod_n_if(out, inn, should_negate as u32) };
 }
+
+#[inline(always)]
+pub(crate) fn add_sub_j_affine(a: &mut [Montgomery; 3], b: &[Montgomery; 2], is_sub: bool) {
+    // SAFETY: `a` and `b` are valid for the duration of the call, `a` is valid
+    // for writes, and `b` has the correct length (2) for the value of `b_is_affine`.
+    unsafe { asm::jacobian::P256_add_sub_j(a, b.as_ptr(), is_sub, true) }
+}
+
+#[inline(always)]
+pub(crate) fn add_sub_j(a: &mut [Montgomery; 3], b: &[Montgomery; 3], is_sub: bool) {
+    // SAFETY: `a` and `b` are valid for the duration of the call, `a` is valid
+    // for writes, and `b` has the correct length (3) for the value of `b_is_affine`.
+    unsafe { asm::jacobian::P256_add_sub_j(a, b.as_ptr(), is_sub, false) }
+}

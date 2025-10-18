@@ -222,7 +222,7 @@ pub unsafe extern "C" fn P256_times2() {
 ///
 /// `r1` shall contain `b`, which must not be the point at infinity:
 /// 1. if `r3 == 0`, a valid [`*const [Montgomery; 3]`](super::Montgomery).
-/// 2. else, a valid `*const [[u32; 8]; 2]`.
+/// 2. else, a valid [`*const [Montgomery; 2]`](Montgomery).
 ///
 /// `r2` shall contain `is_sub`, a boolean.
 ///
@@ -233,12 +233,17 @@ pub unsafe extern "C" fn P256_times2() {
 /// # Return
 /// On return, the location pointed to by the input `r0` will contain the result of the operation.
 ///
-/// > **Note**: `r0` will be overriden during the execution of this function (it is callee-saved).
+/// # Safety
+/// The caller must guarantee that `a` and `b` are valid for the duration of the function call,
+/// that `a` is valid for writes, and that `b` has the correct length w.r.t. the value of
+/// `b_is_affine`.
+///
+/// > **Note**: This function adheres to the ARM calling convention.
 #[unsafe(naked)]
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn P256_add_sub_j(
+pub(in crate::sys) unsafe extern "C" fn P256_add_sub_j(
     a: *mut [Montgomery; 3],
-    b: *const u32,
+    b: *const Montgomery,
     is_sub: bool,
     b_is_affine: bool,
 ) {

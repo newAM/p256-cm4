@@ -6,32 +6,31 @@ mod sys;
 use crate::sys::asm::{
     P256_add_mod_n, P256_decompress_point, P256_divsteps2_31, P256_double_j, P256_matrix_mul_fg_9,
     P256_mul_mod_n, P256_negate_mod_p_if, P256_point_is_on_curve, P256_reduce_mod_n_32bytes,
-    P256_verify_last_step,
-    jacobian::{P256_add_sub_j, P256_jacobian_to_affine},
+    P256_verify_last_step, jacobian::P256_jacobian_to_affine,
 };
 
-use sys::{Montgomery, negate_mod_n_if};
+use sys::{Montgomery, add_sub_j, add_sub_j_affine, negate_mod_n_if};
 pub use sys::{check_range_n, check_range_p};
 
 // This table contains 1G, 3G, 5G, ... 15G in affine coordinates in montgomery form
 #[rustfmt::skip]
-static P256_BASEPOINT_PRECOMP: [[[u32; 8]; 2]; 8]= [
-[[0x18a9143c, 0x79e730d4, 0x5fedb601, 0x75ba95fc, 0x77622510, 0x79fb732b, 0xa53755c6, 0x18905f76],
-[0xce95560a, 0xddf25357, 0xba19e45c, 0x8b4ab8e4, 0xdd21f325, 0xd2e88688, 0x25885d85, 0x8571ff18]],
-[[0x4eebc127, 0xffac3f90, 0x87d81fb, 0xb027f84a, 0x87cbbc98, 0x66ad77dd, 0xb6ff747e, 0x26936a3f],
-[0xc983a7eb, 0xb04c5c1f, 0x861fe1a, 0x583e47ad, 0x1a2ee98e, 0x78820831, 0xe587cc07, 0xd5f06a29]],
-[[0xc45c61f5, 0xbe1b8aae, 0x94b9537d, 0x90ec649a, 0xd076c20c, 0x941cb5aa, 0x890523c8, 0xc9079605],
-[0xe7ba4f10, 0xeb309b4a, 0xe5eb882b, 0x73c568ef, 0x7e7a1f68, 0x3540a987, 0x2dd1e916, 0x73a076bb]],
-[[0xa0173b4f, 0x746354e, 0xd23c00f7, 0x2bd20213, 0xc23bb08, 0xf43eaab5, 0xc3123e03, 0x13ba5119],
-[0x3f5b9d4d, 0x2847d030, 0x5da67bdd, 0x6742f2f2, 0x77c94195, 0xef933bdc, 0x6e240867, 0xeaedd915]],
-[[0x264e20e8, 0x75c96e8f, 0x59a7a841, 0xabe6bfed, 0x44c8eb00, 0x2cc09c04, 0xf0c4e16b, 0xe05b3080],
-[0xa45f3314, 0x1eb7777a, 0xce5d45e3, 0x56af7bed, 0x88b12f1a, 0x2b6e019a, 0xfd835f9b, 0x86659cd]],
-[[0x6245e404, 0xea7d260a, 0x6e7fdfe0, 0x9de40795, 0x8dac1ab5, 0x1ff3a415, 0x649c9073, 0x3e7090f1],
-[0x2b944e88, 0x1a768561, 0xe57f61c8, 0x250f939e, 0x1ead643d, 0xc0daa89, 0xe125b88e, 0x68930023]],
-[[0x4b2ed709, 0xccc42563, 0x856fd30d, 0xe356769, 0x559e9811, 0xbcbcd43f, 0x5395b759, 0x738477ac],
-[0xc00ee17f, 0x35752b90, 0x742ed2e3, 0x68748390, 0xbd1f5bc1, 0x7cd06422, 0xc9e7b797, 0xfbc08769]],
-[[0xbc60055b, 0x72bcd8b7, 0x56e27e4b, 0x3cc23ee, 0xe4819370, 0xee337424, 0xad3da09, 0xe2aa0e43],
-[0x6383c45d, 0x40b8524f, 0x42a41b25, 0xd7663554, 0x778a4797, 0x64efa6de, 0x7079adf4, 0x2042170a]]
+static P256_BASEPOINT_PRECOMP: [[Montgomery; 2]; 8] = [
+    [Montgomery::new([0x18a9143c, 0x79e730d4, 0x5fedb601, 0x75ba95fc, 0x77622510, 0x79fb732b, 0xa53755c6, 0x18905f76]),
+     Montgomery::new([0xce95560a, 0xddf25357, 0xba19e45c, 0x8b4ab8e4, 0xdd21f325, 0xd2e88688, 0x25885d85, 0x8571ff18])],
+    [Montgomery::new([0x4eebc127, 0xffac3f90, 0x87d81fb, 0xb027f84a, 0x87cbbc98, 0x66ad77dd, 0xb6ff747e, 0x26936a3f]),
+     Montgomery::new([0xc983a7eb, 0xb04c5c1f, 0x861fe1a, 0x583e47ad, 0x1a2ee98e, 0x78820831, 0xe587cc07, 0xd5f06a29])],
+    [Montgomery::new([0xc45c61f5, 0xbe1b8aae, 0x94b9537d, 0x90ec649a, 0xd076c20c, 0x941cb5aa, 0x890523c8, 0xc9079605]),
+     Montgomery::new([0xe7ba4f10, 0xeb309b4a, 0xe5eb882b, 0x73c568ef, 0x7e7a1f68, 0x3540a987, 0x2dd1e916, 0x73a076bb])],
+    [Montgomery::new([0xa0173b4f, 0x746354e, 0xd23c00f7, 0x2bd20213, 0xc23bb08, 0xf43eaab5, 0xc3123e03, 0x13ba5119]),
+     Montgomery::new([0x3f5b9d4d, 0x2847d030, 0x5da67bdd, 0x6742f2f2, 0x77c94195, 0xef933bdc, 0x6e240867, 0xeaedd915])],
+    [Montgomery::new([0x264e20e8, 0x75c96e8f, 0x59a7a841, 0xabe6bfed, 0x44c8eb00, 0x2cc09c04, 0xf0c4e16b, 0xe05b3080]),
+     Montgomery::new([0xa45f3314, 0x1eb7777a, 0xce5d45e3, 0x56af7bed, 0x88b12f1a, 0x2b6e019a, 0xfd835f9b, 0x86659cd])],
+    [Montgomery::new([0x6245e404, 0xea7d260a, 0x6e7fdfe0, 0x9de40795, 0x8dac1ab5, 0x1ff3a415, 0x649c9073, 0x3e7090f1]),
+     Montgomery::new([0x2b944e88, 0x1a768561, 0xe57f61c8, 0x250f939e, 0x1ead643d, 0xc0daa89, 0xe125b88e, 0x68930023])],
+    [Montgomery::new([0x4b2ed709, 0xccc42563, 0x856fd30d, 0xe356769, 0x559e9811, 0xbcbcd43f, 0x5395b759, 0x738477ac]),
+     Montgomery::new([0xc00ee17f, 0x35752b90, 0x742ed2e3, 0x68748390, 0xbd1f5bc1, 0x7cd06422, 0xc9e7b797, 0xfbc08769])],
+    [Montgomery::new([0xbc60055b, 0x72bcd8b7, 0x56e27e4b, 0x3cc23ee, 0xe4819370, 0xee337424, 0xad3da09, 0xe2aa0e43]),
+     Montgomery::new([0x6383c45d, 0x40b8524f, 0x42a41b25, 0xd7663554, 0x778a4797, 0x64efa6de, 0x7079adf4, 0x2042170a])]
 ];
 
 // This contains two tables, 8 points each in affine coordinates in montgomery form
@@ -220,14 +219,8 @@ fn scalarmult_variable_base(
     unsafe { P256_double_j(&raw mut table[7] as _, &raw const table[0] as _) };
     (1..8).for_each(|i| {
         table.copy_within(7..8, i);
-        unsafe {
-            P256_add_sub_j(
-                &raw mut table[i] as _,
-                &raw const table[i - 1] as _,
-                false,
-                false,
-            )
-        };
+        let [i, i_min_one] = table.get_disjoint_mut([i, i - 1]).unwrap();
+        add_sub_j(i, i_min_one, false);
     });
 
     // Calculate the result as (((((((((e[63]*G)*2^4)+e[62])*2^4)+e[61])*2^4)...)+e[1])*2^4)+e[0] = (2^252*e[63] + 2^248*e[62] + ... + e[0])*G.
@@ -258,14 +251,7 @@ fn scalarmult_variable_base(
         // will occur instead. We don't bother fixing the same constant time for that case since
         // the probability of that random value to be generated is around 1/2^255 and an
         // attacker could easily test this case anyway.
-        unsafe {
-            P256_add_sub_j(
-                &mut current_point,
-                &raw const selected_point as _,
-                false,
-                false,
-            )
-        };
+        add_sub_j(&mut current_point, &selected_point, false);
     });
     unsafe { P256_jacobian_to_affine(output_mont_x, output_mont_y, &current_point) };
 
@@ -424,14 +410,7 @@ fn scalarmult_fixed_base(output_x: &mut Montgomery, output_y: &mut Montgomery, s
                 unsafe {
                     P256_negate_mod_p_if(&mut selected_point[1], &selected_point[1], sign & 1)
                 };
-                unsafe {
-                    P256_add_sub_j(
-                        &raw mut current_point as _,
-                        &raw const selected_point as _,
-                        false,
-                        true,
-                    )
-                };
+                add_sub_j_affine(&mut current_point, &selected_point, false);
             }
         }
         {
@@ -442,14 +421,7 @@ fn scalarmult_fixed_base(output_x: &mut Montgomery, output_y: &mut Montgomery, s
             mask = (mask ^ sign) & 7;
             selected_point.copy_from_slice(&P256_BASEPOINT_PRECOMP2[0][mask as usize]);
             unsafe { P256_negate_mod_p_if(&mut selected_point[1], &selected_point[1], sign & 1) };
-            unsafe {
-                P256_add_sub_j(
-                    &raw mut current_point as _,
-                    &raw const selected_point as _,
-                    false,
-                    true,
-                )
-            };
+            add_sub_j_affine(&mut current_point, &selected_point, false);
         }
     }
 
@@ -720,14 +692,8 @@ pub fn verify(
     unsafe { P256_double_j(&raw mut pk_table[7] as _, &raw const pk_table[0] as _) };
     (1..8).for_each(|i| {
         pk_table.copy_within(7..8, i);
-        unsafe {
-            P256_add_sub_j(
-                &raw mut pk_table[i] as _,
-                &raw const pk_table[i - 1] as _,
-                false,
-                false,
-            )
-        };
+        let [i, i_min_one] = pk_table.get_disjoint_mut([i, i - 1]).unwrap();
+        add_sub_j(i, i_min_one, false);
     });
 
     let mut z: [u32; 8] = [0; 8];
@@ -747,7 +713,7 @@ pub fn verify(
     let slide_bp: [i8; 257] = slide_257(u32x8_to_u8x32(&u1));
     let slide_pk: [i8; 257] = slide_257(u32x8_to_u8x32(&u2));
 
-    let mut cp: [[u32; 8]; 3] = [[0; 8]; 3];
+    let mut cp = [Montgomery::zero(); 3];
 
     slide_bp
         .iter()
@@ -765,10 +731,8 @@ pub fn verify(
             };
 
             if let Some((precomp, is_sub)) = bp_op {
-                let precomp = &raw const P256_BASEPOINT_PRECOMP[precomp as usize];
-                unsafe {
-                    P256_add_sub_j(&raw mut cp as _, precomp as _, is_sub, true);
-                }
+                let precomp = &P256_BASEPOINT_PRECOMP[precomp as usize];
+                add_sub_j_affine(&mut cp, precomp, is_sub);
             }
 
             let pk_op = if pk > 0 {
@@ -780,10 +744,8 @@ pub fn verify(
             };
 
             if let Some((pk_idx, is_sub)) = pk_op {
-                let pk_table = &raw const pk_table[pk_idx as usize];
-                unsafe {
-                    P256_add_sub_j(&raw mut cp as _, pk_table as _, is_sub, false);
-                }
+                let pk_table = &pk_table[pk_idx as usize];
+                add_sub_j(&mut cp, pk_table, is_sub);
             }
         });
 
