@@ -186,9 +186,14 @@ pub(in crate::sys) unsafe extern "C" fn P256_check_range_n(a: *const [u32; 8]) -
 ///
 /// # Returns
 /// On return, `r0` will contain the result of the computation as a boolean.
+///
+/// # Safety
+/// The caller must guarantee that `a` is valid for the duration of the function call.
+///
+/// > **Note**: This function adheres to the ARM calling convention.
 #[unsafe(naked)]
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn P256_check_range_p(a: *const [u32; 8]) -> bool {
+pub(in crate::sys) unsafe extern "C" fn P256_check_range_p(a: *const [u32; 8]) -> bool {
     naked_asm!(
         "
             push {r4-r8, lr}
