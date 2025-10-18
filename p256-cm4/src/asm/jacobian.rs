@@ -14,10 +14,14 @@ use crate::sys::asm::Montgomery;
 /// # Return
 /// On return, the dereference of the input value of `r0` will contain the result of the computation.
 ///
-/// > **Note**: `r0` will be overriden during the execution of this function (it is callee-saved).
+/// # Safety
+/// The caller must guarantee that `jacobian_out` and `jacobian_in` are valid for
+/// the duration of the function, and that `jacobian_out` is valid for writes.
+///
+/// > **Note**: This function adheres to the ARM calling convention.
 #[unsafe(naked)]
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn P256_double_j(
+pub(in crate::sys) unsafe extern "C" fn P256_double_j(
     jacobian_out: *mut [Montgomery; 3],
     jacobian_in: *const [Montgomery; 3],
 ) {

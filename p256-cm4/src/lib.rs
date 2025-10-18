@@ -4,12 +4,12 @@
 mod sys;
 
 use crate::sys::asm::{
-    P256_add_mod_n, P256_decompress_point, P256_divsteps2_31, P256_double_j, P256_matrix_mul_fg_9,
-    P256_mul_mod_n, P256_negate_mod_p_if, P256_point_is_on_curve, P256_reduce_mod_n_32bytes,
-    P256_verify_last_step, jacobian::P256_jacobian_to_affine,
+    P256_add_mod_n, P256_decompress_point, P256_divsteps2_31, P256_matrix_mul_fg_9, P256_mul_mod_n,
+    P256_negate_mod_p_if, P256_point_is_on_curve, P256_reduce_mod_n_32bytes, P256_verify_last_step,
+    jacobian::P256_jacobian_to_affine,
 };
 
-use sys::{Montgomery, add_sub_j, add_sub_j_affine, negate_mod_n_if};
+use sys::{Montgomery, add_sub_j, add_sub_j_affine, double_j, double_j_inplace, negate_mod_n_if};
 pub use sys::{check_range_n, check_range_p};
 
 // This table contains 1G, 3G, 5G, ... 15G in affine coordinates in montgomery form
@@ -216,7 +216,8 @@ fn scalarmult_variable_base(
     table[0][0] = *output_mont_x;
     table[0][1] = *output_mont_y;
     table[0][2] = Montgomery::one();
-    unsafe { P256_double_j(&raw mut table[7] as _, &raw const table[0] as _) };
+    let [seven, zero] = table.get_disjoint_mut([7, 0]).unwrap();
+    double_j(seven, zero);
     (1..8).for_each(|i| {
         table.copy_within(7..8, i);
         let [i, i_min_one] = table.get_disjoint_mut([i, i - 1]).unwrap();
@@ -231,9 +232,7 @@ fn scalarmult_variable_base(
     current_point.copy_from_slice(&table[(e[63] >> 1) as u8 as usize]);
 
     (0..63).rev().for_each(|i| {
-        (0..4).for_each(|_| unsafe {
-            P256_double_j(&raw mut current_point as _, &raw const current_point as _)
-        });
+        (0..4).for_each(|_| double_j_inplace(&mut current_point));
 
         let mut selected_point = [Montgomery::zero(); 3];
         selected_point.copy_from_slice(&table[(abs_int(e[i]) >> 1) as u8 as usize]);
@@ -402,7 +401,7 @@ fn scalarmult_fixed_base(output_x: &mut Montgomery, output_y: &mut Montgomery, s
                 current_point[..2].copy_from_slice(&P256_BASEPOINT_PRECOMP2[1][mask as usize]);
                 current_point[2] = Montgomery::one();
             } else {
-                unsafe { P256_double_j(&raw mut current_point as _, &raw mut current_point as _) };
+                double_j_inplace(&mut current_point);
 
                 let sign: u32 = get_bit!(scalar2, i + 3 * 64 + 32 + 1).wrapping_sub(1); // positive: 0, negative: -1
                 mask = (mask ^ sign) & 7;
@@ -689,7 +688,8 @@ pub fn verify(
     }
 
     // Create a table of P, 3P, 5P, ..., 15P, where P is the public key.
-    unsafe { P256_double_j(&raw mut pk_table[7] as _, &raw const pk_table[0] as _) };
+    let [seven, zero] = pk_table.get_disjoint_mut([7, 0]).unwrap();
+    double_j(seven, zero);
     (1..8).for_each(|i| {
         pk_table.copy_within(7..8, i);
         let [i, i_min_one] = pk_table.get_disjoint_mut([i, i - 1]).unwrap();
@@ -720,7 +720,7 @@ pub fn verify(
         .rev()
         .zip(slide_pk.iter().rev())
         .for_each(|(&bp, &pk)| {
-            unsafe { P256_double_j(&raw mut cp as _, &raw mut cp as _) };
+            double_j_inplace(&mut cp);
 
             let bp_op = if bp > 0 {
                 Some((bp / 2, false))
