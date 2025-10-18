@@ -2,25 +2,23 @@ use core::arch::naked_asm;
 
 #[derive(Debug, Clone, Copy)]
 #[repr(transparent)]
-pub struct Montgomery([u32; 8]);
+pub struct Montgomery(pub(in crate::sys) [u32; 8]);
 
 impl Montgomery {
+    /// Create a new [`Montgomery`] with the given value.
+    ///
+    /// For conversion from little-endian integers, see the
+    /// [`From`] impls for this type.
+    pub(crate) const fn new(value: [u32; 8]) -> Self {
+        Self(value)
+    }
+
+    pub const fn one() -> Self {
+        Self([1, 0, 0, 0xffffffff, 0xffffffff, 0xffffffff, 0xfffffffe, 0])
+    }
+
     pub const fn zero() -> Self {
         Self([0u32; _])
-    }
-}
-
-impl core::ops::Index<usize> for Montgomery {
-    type Output = u32;
-
-    fn index(&self, index: usize) -> &Self::Output {
-        &self.0[index]
-    }
-}
-
-impl Default for Montgomery {
-    fn default() -> Self {
-        Self::zero()
     }
 }
 
@@ -36,10 +34,17 @@ impl Default for Montgomery {
 /// # Return
 /// On return, the dereference of the input value of `r0` shall contain the result of the computation.
 ///
-/// > **Note**: `r0` will be overriden during the execution of this function (it is callee-saved).
+/// # Safety
+/// The caller must guarantee that `a` and `aR` are valid for the duration of the function call,
+/// and that `a` is valid for writes.
+///
+/// > **Note**: This function adheres to the ARM calling convention.
 #[unsafe(naked)]
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn P256_to_montgomery(a: *mut Montgomery, aR: *const [u32; 8]) {
+pub(in crate::sys) unsafe extern "C" fn P256_to_montgomery(
+    a: *mut Montgomery,
+    aR: *const [u32; 8],
+) {
     naked_asm!(
         "
             push {{r0, r4-r11, lr}}
@@ -72,17 +77,24 @@ pub unsafe extern "C" fn P256_to_montgomery(a: *mut Montgomery, aR: *const [u32;
 /// # Inputs
 /// `r0` shall contain a valid `*mut [u32; 8]`.
 ///
-///  `r1` shall contain a valid [`*cont Montgomery`](Montgomery), the number to be converted.
+/// `r1` shall contain a valid [`*cont Montgomery`](Montgomery), the number to be converted.
 ///
 /// The pointers in `r0` and `r1` may overlap.
 ///
 /// # Return
 /// On return, the dereference of the input value of `r0` shall contain the result of the computation.
 ///
-/// > **Note**: `r0` will be overriden during the execution of this function (it is callee-saved).
+/// # Safety
+/// The caller must guarantee that `a` and `aR` are valid for the duration of the function call,
+/// and that `a` is valid for writes.
+///
+/// > **Note**: This function adheres to the ARM calling convention.
 #[unsafe(naked)]
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn P256_from_montgomery(a: *mut [u32; 8], aR: *const Montgomery) {
+pub(in crate::sys) unsafe extern "C" fn P256_from_montgomery(
+    a: *mut [u32; 8],
+    aR: *const Montgomery,
+) {
     naked_asm!(
         "
             push {{r0,r4-r11,lr}}

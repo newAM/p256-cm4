@@ -4,16 +4,14 @@
 mod sys;
 
 use crate::sys::asm::{
-    P256_add_mod_n, P256_decompress_point, P256_divsteps2_31, P256_double_j, P256_from_montgomery,
-    P256_matrix_mul_fg_9, P256_mul_mod_n, P256_negate_mod_p_if, P256_point_is_on_curve,
-    P256_reduce_mod_n_32bytes, P256_to_montgomery, P256_verify_last_step,
+    P256_add_mod_n, P256_decompress_point, P256_divsteps2_31, P256_double_j, P256_matrix_mul_fg_9,
+    P256_mul_mod_n, P256_negate_mod_p_if, P256_point_is_on_curve, P256_reduce_mod_n_32bytes,
+    P256_verify_last_step,
     jacobian::{P256_add_sub_j, P256_jacobian_to_affine},
 };
 
-use sys::negate_mod_n_if;
+use sys::{Montgomery, negate_mod_n_if};
 pub use sys::{check_range_n, check_range_p};
-
-const ONE_MONTGOMERY: [u32; 8] = [1, 0, 0, 0xffffffff, 0xffffffff, 0xffffffff, 0xfffffffe, 0];
 
 // This table contains 1G, 3G, 5G, ... 15G in affine coordinates in montgomery form
 #[rustfmt::skip]
@@ -48,44 +46,44 @@ static P256_BASEPOINT_PRECOMP: [[[u32; 8]; 2]; 8]= [
 // (2^192 + 2^128 + 2^64 + 1)G
 // The second table contains the same points multiplied by 2^32
 #[rustfmt::skip]
-const P256_BASEPOINT_PRECOMP2: [[[[u32; 8]; 2]; 8]; 2] =
+const P256_BASEPOINT_PRECOMP2: [[[Montgomery; 2]; 8]; 2] =
 [
-[
-[[0x670844e0, 0x52d8a7c9, 0xef68a29d, 0xe33bdc, 0x4bdb7361, 0xf3d2848, 0x91c5304d, 0x5222c821],
-[0xdf73fc25, 0xea6d2944, 0x255c81b, 0xa04c0f55, 0xefe488a8, 0x29acdc97, 0x80a560de, 0xbe2e158f]],
-[[0x2b13e673, 0xfc8511ee, 0xd103ed24, 0xffc58dee, 0xea7e99b8, 0x1022523a, 0x4afc8a17, 0x8f43ea39],
-[0xc5f33d0b, 0x8f4e2dbc, 0xd0aa1681, 0x3bc099fa, 0x79ff9df1, 0xffbb7b41, 0xd58b57c4, 0x180de09d]],
-[[0x8bd1cda5, 0x56430752, 0x8e05eda5, 0x1807577f, 0x956896e9, 0x99c699b, 0xf1f0efb5, 0x83d6093d],
-[0xed97061c, 0xef5af17e, 0x30d4c3c, 0x35b977b8, 0x49229439, 0x81fa75a2, 0xa0b6d35d, 0xf5a22070]],
-[[0x74f81cf1, 0x814c5365, 0x120065b, 0xe30baff7, 0x15132621, 0x80ae1256, 0x36a80788, 0x16d2b8cb],
-[0xecc50bca, 0x33d14697, 0x17aedd21, 0x19a9dfb0, 0xedc3f766, 0x523fbcc7, 0xb2cf5afd, 0x9c4de6dd]],
-[[0xcf0d9f6d, 0x5305a9e6, 0x81a9b021, 0x5839172f, 0x75c687cf, 0xcca7a4dd, 0x844be22f, 0x36d59b3e],
-[0x111a53e9, 0xcace7e62, 0xf063f3a1, 0x91c843d4, 0xda812da, 0xbf77e5f0, 0x437f3176, 0xe64af9c]],
-[[0xcf07517d, 0xdbd568bb, 0xba6830b9, 0x2f1afba2, 0xe6c4c2a6, 0x15b6807c, 0xe4966aef, 0x91c7eabc],
-[0xd6b2b6e6, 0x716dea1b, 0x19f85b4b, 0x248c43d1, 0x4a315e2a, 0x16dcfd60, 0xc72b3d0b, 0x15fdd303]],
-[[0x42b7dfd5, 0xe40bf9f4, 0x2d934f2a, 0x673689f3, 0x30a6f50b, 0x8314beb4, 0x976ec64e, 0xd17af2bc],
-[0x1ee7ddf1, 0x39f66c4f, 0x68ea373c, 0x7f68e18b, 0x53d0b186, 0x5166c1f2, 0x7be58f14, 0x95dda601]],
-[[0x42913074, 0xd5ae356, 0x48a542b1, 0x55491b27, 0xb310732a, 0x469ca665, 0x5f1a4cc1, 0x29591d52],
-[0xb84f983f, 0xe76f5b6b, 0x9f5f84e1, 0xbe7eef41, 0x80baa189, 0x1200d496, 0x18ef332c, 0x6376551f]]
-],
-[
-[[0x7c4e54f5, 0xb9e5cbc0, 0xe1410e34, 0xc53a1a17, 0xec454425, 0x3e199130, 0x1700902e, 0xb029c97e],
-[0x786423b6, 0x2de66e11, 0xb41a95be, 0x262dc914, 0x451b683, 0x51766abd, 0x85bb6fb1, 0x55ad5f34]],
-[[0x9066cb79, 0x74f4f1c, 0x30c8b94e, 0x1ab31bd6, 0xd74275b3, 0x6d3f012f, 0x9ddcce40, 0xa214d0b1],
-[0xd165050a, 0x24aedf74, 0xe0e5dc3e, 0x95f17ece, 0xd9224456, 0x6ada9cda, 0x2dd60eea, 0x1fadb2d1]],
-[[0xe20cfb9b, 0xa3d83091, 0xba76e0cb, 0xae79c975, 0xc8858a6e, 0xa5f2a588, 0x874a3168, 0xe897a5f4],
-[0x7d48f096, 0xf6c1ef40, 0xc35b132c, 0x1f9c516b, 0x53c479fd, 0xe1040f91, 0x9df06743, 0x60e881f]],
-[[0x52a90e51, 0x9e0ad72, 0x38c50a96, 0xb7e66ea3, 0x7d997770, 0xab32ad05, 0x445671cb, 0xceaffe2],
-[0x5d37cc99, 0xdfbe753c, 0xe0fea2d5, 0x95d068cc, 0x4dd77cb6, 0x1e37cdda, 0x55530688, 0x88c5a4bb]],
-[[0xc7744f1, 0x3413f033, 0xbc816702, 0x23c05c89, 0x1192b5ac, 0x2322ee9a, 0x373180bb, 0xc1636a0],
-[0xbdde0207, 0xfe2f3d4, 0xc23578d8, 0xe1a093a, 0xc888ead, 0x6e5f0d1, 0x52a2b660, 0x9ca285a5]],
-[[0xce923964, 0xdae76995, 0xa34c7993, 0xcc96493a, 0xea73d9e7, 0xd19b5144, 0x311e6e34, 0x4a5c263],
-[0xd9a2a443, 0x7db5b32b, 0x2cfd960c, 0x3754bd33, 0xa430f15, 0xc5bcc98, 0xd9a94574, 0x5651201f]],
-[[0xfc0418fe, 0xebdd8921, 0x34e20036, 0x37015b39, 0xdf03a353, 0xcf4fcd8f, 0xf12cab16, 0xdc2de6e1],
-[0xd071df14, 0x9c17cc1a, 0x63415530, 0xd7c5e6a3, 0x68f3fb1e, 0xb5301660, 0x18269301, 0xb5f70bc9]],
-[[0x79ec1a0f, 0x2d8daefd, 0xceb39c97, 0x3bbcd6fd, 0x58f61a95, 0xf5575ffc, 0xadf7b420, 0xdbd986c4],
-[0x15f39eb7, 0x81aa8814, 0xb98d976c, 0x6ee2fcf5, 0xcf2f717d, 0x5465475d, 0x6860bbd0, 0x8e24d3c4]]
-]
+    [
+        [Montgomery::new([0x670844e0, 0x52d8a7c9, 0xef68a29d, 0xe33bdc, 0x4bdb7361, 0xf3d2848, 0x91c5304d, 0x5222c821]),
+         Montgomery::new([0xdf73fc25, 0xea6d2944, 0x255c81b, 0xa04c0f55, 0xefe488a8, 0x29acdc97, 0x80a560de, 0xbe2e158f])],
+        [Montgomery::new([0x2b13e673, 0xfc8511ee, 0xd103ed24, 0xffc58dee, 0xea7e99b8, 0x1022523a, 0x4afc8a17, 0x8f43ea39]),
+         Montgomery::new([0xc5f33d0b, 0x8f4e2dbc, 0xd0aa1681, 0x3bc099fa, 0x79ff9df1, 0xffbb7b41, 0xd58b57c4, 0x180de09d])],
+        [Montgomery::new([0x8bd1cda5, 0x56430752, 0x8e05eda5, 0x1807577f, 0x956896e9, 0x99c699b, 0xf1f0efb5, 0x83d6093d]),
+         Montgomery::new([0xed97061c, 0xef5af17e, 0x30d4c3c, 0x35b977b8, 0x49229439, 0x81fa75a2, 0xa0b6d35d, 0xf5a22070])],
+        [Montgomery::new([0x74f81cf1, 0x814c5365, 0x120065b, 0xe30baff7, 0x15132621, 0x80ae1256, 0x36a80788, 0x16d2b8cb]),
+         Montgomery::new([0xecc50bca, 0x33d14697, 0x17aedd21, 0x19a9dfb0, 0xedc3f766, 0x523fbcc7, 0xb2cf5afd, 0x9c4de6dd])],
+        [Montgomery::new([0xcf0d9f6d, 0x5305a9e6, 0x81a9b021, 0x5839172f, 0x75c687cf, 0xcca7a4dd, 0x844be22f, 0x36d59b3e]),
+         Montgomery::new([0x111a53e9, 0xcace7e62, 0xf063f3a1, 0x91c843d4, 0xda812da, 0xbf77e5f0, 0x437f3176, 0xe64af9c])],
+        [Montgomery::new([0xcf07517d, 0xdbd568bb, 0xba6830b9, 0x2f1afba2, 0xe6c4c2a6, 0x15b6807c, 0xe4966aef, 0x91c7eabc]),
+         Montgomery::new([0xd6b2b6e6, 0x716dea1b, 0x19f85b4b, 0x248c43d1, 0x4a315e2a, 0x16dcfd60, 0xc72b3d0b, 0x15fdd303])],
+        [Montgomery::new([0x42b7dfd5, 0xe40bf9f4, 0x2d934f2a, 0x673689f3, 0x30a6f50b, 0x8314beb4, 0x976ec64e, 0xd17af2bc]),
+         Montgomery::new([0x1ee7ddf1, 0x39f66c4f, 0x68ea373c, 0x7f68e18b, 0x53d0b186, 0x5166c1f2, 0x7be58f14, 0x95dda601])],
+        [Montgomery::new([0x42913074, 0xd5ae356, 0x48a542b1, 0x55491b27, 0xb310732a, 0x469ca665, 0x5f1a4cc1, 0x29591d52]),
+         Montgomery::new([0xb84f983f, 0xe76f5b6b, 0x9f5f84e1, 0xbe7eef41, 0x80baa189, 0x1200d496, 0x18ef332c, 0x6376551f])]
+    ],
+    [
+        [Montgomery::new([0x7c4e54f5, 0xb9e5cbc0, 0xe1410e34, 0xc53a1a17, 0xec454425, 0x3e199130, 0x1700902e, 0xb029c97e]),
+         Montgomery::new([0x786423b6, 0x2de66e11, 0xb41a95be, 0x262dc914, 0x451b683, 0x51766abd, 0x85bb6fb1, 0x55ad5f34])],
+        [Montgomery::new([0x9066cb79, 0x74f4f1c, 0x30c8b94e, 0x1ab31bd6, 0xd74275b3, 0x6d3f012f, 0x9ddcce40, 0xa214d0b1]),
+         Montgomery::new([0xd165050a, 0x24aedf74, 0xe0e5dc3e, 0x95f17ece, 0xd9224456, 0x6ada9cda, 0x2dd60eea, 0x1fadb2d1])],
+        [Montgomery::new([0xe20cfb9b, 0xa3d83091, 0xba76e0cb, 0xae79c975, 0xc8858a6e, 0xa5f2a588, 0x874a3168, 0xe897a5f4]),
+         Montgomery::new([0x7d48f096, 0xf6c1ef40, 0xc35b132c, 0x1f9c516b, 0x53c479fd, 0xe1040f91, 0x9df06743, 0x60e881f])],
+        [Montgomery::new([0x52a90e51, 0x9e0ad72, 0x38c50a96, 0xb7e66ea3, 0x7d997770, 0xab32ad05, 0x445671cb, 0xceaffe2]),
+         Montgomery::new([0x5d37cc99, 0xdfbe753c, 0xe0fea2d5, 0x95d068cc, 0x4dd77cb6, 0x1e37cdda, 0x55530688, 0x88c5a4bb])],
+        [Montgomery::new([0xc7744f1, 0x3413f033, 0xbc816702, 0x23c05c89, 0x1192b5ac, 0x2322ee9a, 0x373180bb, 0xc1636a0]),
+         Montgomery::new([0xbdde0207, 0xfe2f3d4, 0xc23578d8, 0xe1a093a, 0xc888ead, 0x6e5f0d1, 0x52a2b660, 0x9ca285a5])],
+        [Montgomery::new([0xce923964, 0xdae76995, 0xa34c7993, 0xcc96493a, 0xea73d9e7, 0xd19b5144, 0x311e6e34, 0x4a5c263]),
+         Montgomery::new([0xd9a2a443, 0x7db5b32b, 0x2cfd960c, 0x3754bd33, 0xa430f15, 0xc5bcc98, 0xd9a94574, 0x5651201f])],
+        [Montgomery::new([0xfc0418fe, 0xebdd8921, 0x34e20036, 0x37015b39, 0xdf03a353, 0xcf4fcd8f, 0xf12cab16, 0xdc2de6e1]),
+         Montgomery::new([0xd071df14, 0x9c17cc1a, 0x63415530, 0xd7c5e6a3, 0x68f3fb1e, 0xb5301660, 0x18269301, 0xb5f70bc9])],
+        [Montgomery::new([0x79ec1a0f, 0x2d8daefd, 0xceb39c97, 0x3bbcd6fd, 0x58f61a95, 0xf5575ffc, 0xadf7b420, 0xdbd986c4]),
+         Montgomery::new([0x15f39eb7, 0x81aa8814, 0xb98d976c, 0x6ee2fcf5, 0xcf2f717d, 0x5465475d, 0x6860bbd0, 0x8e24d3c4])]
+    ]
 ];
 
 // Constant time abs
@@ -176,12 +174,10 @@ pub fn octet_string_to_point(x: &mut [u32; 8], y: &mut [u32; 8], input: &[u8]) -
                 return false;
             }
 
-            let mut x_mont: [u32; 8] = [0; 8];
-            let mut y_mont: [u32; 8] = [0; 8];
+            let x_mont = (*x).into();
+            let y_mont = (*y).into();
 
-            unsafe { P256_to_montgomery(&raw mut x_mont as _, x) };
-            unsafe { P256_to_montgomery(&raw mut y_mont as _, y) };
-            unsafe { P256_point_is_on_curve(&raw const x_mont as _, &raw const y_mont as _) }
+            unsafe { P256_point_is_on_curve(&x_mont, &y_mont) }
         } else if (input[0] >> 1) == 1 && input.len() == 33 {
             unsafe { P256_decompress_point(y, x, u32::from(input[0] & 1)) }
         } else {
@@ -194,8 +190,8 @@ pub fn octet_string_to_point(x: &mut [u32; 8], y: &mut [u32; 8], input: &[u8]) -
 
 // Calculates scalar*P in constant time (except for the scalars 2 and n-2, for which the results take a few extra cycles to compute)
 fn scalarmult_variable_base(
-    output_mont_x: &mut [u32; 8],
-    output_mont_y: &mut [u32; 8],
+    output_mont_x: &mut Montgomery,
+    output_mont_y: &mut Montgomery,
     scalar: &[u32; 8],
 ) {
     // Based on https://eprint.iacr.org/2014/130.pdf, Algorithm 1.
@@ -217,10 +213,10 @@ fn scalarmult_variable_base(
     });
 
     // Create a table of P, 3P, 5P, ... 15P.
-    let mut table: [[[u32; 8]; 3]; 8] = [[[0; 8]; 3]; 8];
-    table[0][0].copy_from_slice(output_mont_x);
-    table[0][1].copy_from_slice(output_mont_y);
-    table[0][2].copy_from_slice(&ONE_MONTGOMERY);
+    let mut table = [[Montgomery::zero(); 3]; 8];
+    table[0][0] = *output_mont_x;
+    table[0][1] = *output_mont_y;
+    table[0][2] = Montgomery::one();
     unsafe { P256_double_j(&raw mut table[7] as _, &raw const table[0] as _) };
     (1..8).for_each(|i| {
         table.copy_within(7..8, i);
@@ -236,7 +232,7 @@ fn scalarmult_variable_base(
 
     // Calculate the result as (((((((((e[63]*G)*2^4)+e[62])*2^4)+e[61])*2^4)...)+e[1])*2^4)+e[0] = (2^252*e[63] + 2^248*e[62] + ... + e[0])*G.
 
-    let mut current_point: [[u32; 8]; 3] = [[0; 8]; 3];
+    let mut current_point = [Montgomery::zero(); 3];
 
     // e[63] is never negative
     current_point.copy_from_slice(&table[(e[63] >> 1) as u8 as usize]);
@@ -246,7 +242,7 @@ fn scalarmult_variable_base(
             P256_double_j(&raw mut current_point as _, &raw const current_point as _)
         });
 
-        let mut selected_point: [[u32; 8]; 3] = [[0; 8]; 3];
+        let mut selected_point = [Montgomery::zero(); 3];
         selected_point.copy_from_slice(&table[(abs_int(e[i]) >> 1) as u8 as usize]);
 
         unsafe {
@@ -264,20 +260,14 @@ fn scalarmult_variable_base(
         // attacker could easily test this case anyway.
         unsafe {
             P256_add_sub_j(
-                &raw mut current_point as _,
+                &mut current_point,
                 &raw const selected_point as _,
                 false,
                 false,
             )
         };
     });
-    unsafe {
-        P256_jacobian_to_affine(
-            &raw mut *output_mont_x as _,
-            &raw mut *output_mont_y as _,
-            &raw const current_point as _,
-        )
-    };
+    unsafe { P256_jacobian_to_affine(output_mont_x, output_mont_y, &current_point) };
 
     // If the scalar was initially even, we now negate the result to get the correct result, since -(scalar*G) = (-scalar*G).
     // This is done by negating y, since -(x,y) = (x,-y).
@@ -286,8 +276,8 @@ fn scalarmult_variable_base(
 
 #[must_use]
 fn scalarmult_generic_no_scalar_check(
-    output_mont_x: &mut [u32; 8],
-    output_mont_y: &mut [u32; 8],
+    output_mont_x: &mut Montgomery,
+    output_mont_y: &mut Montgomery,
     scalar: &[u32; 8],
     in_x: &[u32; 8],
     in_y: &[u32; 8],
@@ -295,15 +285,10 @@ fn scalarmult_generic_no_scalar_check(
     if !check_range_p(in_x) || !check_range_p(in_y) {
         false
     } else {
-        unsafe { P256_to_montgomery(&raw mut *output_mont_x as _, in_x) };
-        unsafe { P256_to_montgomery(&raw mut *output_mont_y as _, in_y) };
+        output_mont_x.read(in_x);
+        output_mont_y.read(in_y);
 
-        if unsafe {
-            !P256_point_is_on_curve(
-                &raw const *output_mont_x as _,
-                &raw const *output_mont_y as _,
-            )
-        } {
+        if unsafe { !P256_point_is_on_curve(output_mont_x, output_mont_y) } {
             false
         } else {
             scalarmult_variable_base(output_mont_x, output_mont_y, scalar);
@@ -327,13 +312,16 @@ pub fn scalarmult_generic(
     in_x: &[u32; 8],
     in_y: &[u32; 8],
 ) -> bool {
+    let mut x = Montgomery::zero();
+    let mut y = Montgomery::zero();
+
     if !check_range_n(scalar)
-        || !scalarmult_generic_no_scalar_check(result_x, result_y, scalar, in_x, in_y)
+        || !scalarmult_generic_no_scalar_check(&mut x, &mut y, scalar, in_x, in_y)
     {
         false
     } else {
-        unsafe { P256_from_montgomery(result_x, &raw const *result_x as _) };
-        unsafe { P256_from_montgomery(result_y, &raw const *result_y as _) };
+        x.write(result_x);
+        x.write(result_y);
         true
     }
 }
@@ -354,8 +342,8 @@ pub fn ecdh_calc_shared_secret(
     others_public_key_x: &[u32; 8],
     others_public_key_y: &[u32; 8],
 ) -> bool {
-    let mut result_x: [u32; 8] = [0; 8];
-    let mut result_y: [u32; 8] = [0; 8];
+    let mut result_x = Montgomery::zero();
+    let mut result_y = Montgomery::zero();
     if !scalarmult_generic_no_scalar_check(
         &mut result_x,
         &mut result_y,
@@ -365,8 +353,9 @@ pub fn ecdh_calc_shared_secret(
     ) {
         false
     } else {
-        unsafe { P256_from_montgomery(&raw mut result_x as _, &raw const result_x as _) };
-        convert_endianness(shared_secret, u32x8_to_u8x32(&result_x));
+        let mut out_x = [0u32; 8];
+        result_x.write(&mut out_x);
+        convert_endianness(shared_secret, u32x8_to_u8x32(&out_x));
         true
     }
 }
@@ -399,11 +388,7 @@ macro_rules! get_bit {
 }
 
 // Calculates scalar*G in constant time
-fn scalarmult_fixed_base(
-    output_mont_x: &mut [u32; 8],
-    output_mont_y: &mut [u32; 8],
-    scalar: &[u32; 8],
-) {
+fn scalarmult_fixed_base(output_x: &mut Montgomery, output_y: &mut Montgomery, scalar: &[u32; 8]) {
     let mut scalar2: [u32; 8] = [0; 8];
 
     // Just as with the algorithm used in variable base scalar multiplication, this algorithm requires the scalar to be odd.
@@ -419,8 +404,8 @@ fn scalarmult_fixed_base(
     // Each scalar times G has already been precomputed in p256_basepoint_precomp2.
     // That way we only need 31 point doublings and 63 point additions.
 
-    let mut current_point: [[u32; 8]; 3] = [[0; 8]; 3];
-    let mut selected_point: [[u32; 8]; 2] = [[0; 8]; 2];
+    let mut current_point = [Montgomery::zero(); 3];
+    let mut selected_point: [Montgomery; 2] = [Montgomery::zero(); 2];
 
     for i in (0..32).rev() {
         {
@@ -429,13 +414,13 @@ fn scalarmult_fixed_base(
                 | (get_bit!(scalar2, i + 2 * 64 + 32 + 1) << 2);
             if i == 31 {
                 current_point[..2].copy_from_slice(&P256_BASEPOINT_PRECOMP2[1][mask as usize]);
-                current_point[2].copy_from_slice(&ONE_MONTGOMERY);
+                current_point[2] = Montgomery::one();
             } else {
                 unsafe { P256_double_j(&raw mut current_point as _, &raw mut current_point as _) };
 
                 let sign: u32 = get_bit!(scalar2, i + 3 * 64 + 32 + 1).wrapping_sub(1); // positive: 0, negative: -1
                 mask = (mask ^ sign) & 7;
-                selected_point.copy_from_slice(&P256_BASEPOINT_PRECOMP2[1][mask as usize]);
+                selected_point = P256_BASEPOINT_PRECOMP2[1][mask as usize];
                 unsafe {
                     P256_negate_mod_p_if(&mut selected_point[1], &selected_point[1], sign & 1)
                 };
@@ -468,16 +453,16 @@ fn scalarmult_fixed_base(
         }
     }
 
-    unsafe {
-        P256_jacobian_to_affine(
-            &raw mut *output_mont_x as _,
-            &raw mut *output_mont_y as _,
-            &raw const current_point as _,
-        )
-    };
+    unsafe { P256_jacobian_to_affine(output_x, output_y, &current_point) };
 
     // Negate final result if the scalar was initially even.
-    unsafe { P256_negate_mod_p_if(output_mont_y, output_mont_y, even as u32) };
+    unsafe {
+        P256_negate_mod_p_if(
+            &raw mut *output_y as _,
+            &raw const output_y as _,
+            even as u32,
+        )
+    };
 }
 
 /// Raw scalar multiplication by the base point of the elliptic curve.
@@ -495,9 +480,14 @@ pub fn scalarmult_base(
     if check_range_n(scalar) {
         false
     } else {
-        scalarmult_fixed_base(result_x, result_y, scalar);
-        unsafe { P256_from_montgomery(result_x, &raw const *result_x as _) };
-        unsafe { P256_from_montgomery(result_y, &raw const *result_y as _) };
+        let mut x = Montgomery::zero();
+        let mut y = Montgomery::zero();
+
+        scalarmult_fixed_base(&mut x, &mut y, scalar);
+
+        x.write(result_x);
+        y.write(result_y);
+
         true
     }
 }
@@ -572,11 +562,13 @@ pub fn sign_step1(result: &mut SignPrecomp, k: &[u32; 8]) -> bool {
         if !check_range_n(k) {
             break;
         }
-        let mut output_x: [u32; 8] = [0; 8];
-        let mut output_y: [u32; 8] = [0; 8];
+        let mut output_x = Montgomery::zero();
+        let mut output_y = Montgomery::zero();
+
         scalarmult_fixed_base(&mut output_x, &mut output_y, k);
         mod_n_inv(&mut result.k_inv, k);
-        unsafe { P256_from_montgomery(&raw mut result.r, &raw const output_x as _) };
+
+        output_x.write(&mut result.r);
         unsafe { P256_reduce_mod_n_32bytes(&raw mut result.r, &raw const result.r) };
 
         let r_sum: u32 = (0..8).fold(0, |r_sum, i| r_sum | result.r[i]);
@@ -710,12 +702,10 @@ pub fn verify(
         return false;
     }
 
-    let mut pk_table: [[[u32; 8]; 3]; 8] = [[[0; 8]; 3]; 8];
-    unsafe {
-        P256_to_montgomery(&raw mut pk_table[0][0] as _, public_key_x);
-        P256_to_montgomery(&raw mut pk_table[0][1] as _, public_key_y);
-    }
-    pk_table[0][2].copy_from_slice(&ONE_MONTGOMERY);
+    let mut pk_table = [[Montgomery::zero(); 3]; 8];
+    pk_table[0][0].read(public_key_x);
+    pk_table[0][1].read(public_key_y);
+    pk_table[0][2] = Montgomery::one();
 
     if unsafe {
         !P256_point_is_on_curve(

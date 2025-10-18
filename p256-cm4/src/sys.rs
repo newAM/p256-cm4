@@ -2,6 +2,63 @@
 #[cfg(target_arch = "arm")]
 pub(crate) mod asm;
 
+pub use asm::montgomery::Montgomery;
+
+impl Montgomery {
+    /// Set the contents of `self` to the montgomery representation
+    /// of the little-endian integer `normal`.
+    pub fn read(&mut self, normal: &[u32; 8]) {
+        // SAFETY: `normal` and `mont` are valid for the duration of
+        // the function call, and `mont` is valid for writes.
+        unsafe { asm::montgomery::P256_to_montgomery(self, normal) };
+    }
+
+    /// Write the little-endian integer representation of `self`
+    /// to `normal`.
+    pub fn write(&self, normal: &mut [u32; 8]) {
+        // SAFETY: `normal` and `mont` are valid for the duration of
+        // the function call, and `normal` is valid for writes.
+        unsafe { asm::montgomery::P256_from_montgomery(normal, self) };
+    }
+}
+
+impl From<[u32; 8]> for Montgomery {
+    fn from(mut normal: [u32; 8]) -> Self {
+        // SAFETY: `normal` is valid for the duration of the function
+        // call, and is valid for writes. The written-to and read-from
+        // pointers passed to `P256_to_montgomery` are allowed to overlap.
+        unsafe { asm::montgomery::P256_to_montgomery(&raw mut normal as _, &raw const normal) };
+        Self(normal)
+    }
+}
+
+impl From<Montgomery> for [u32; 8] {
+    fn from(value: Montgomery) -> Self {
+        let mut array = value.0;
+
+        // SAFETY: `array` is valid for the duration of the function call
+        // call, and is valid for writes. The written-to and read-from
+        // pointers passed to `P256_from_montgomery` are allowed to overlap.
+        unsafe { asm::montgomery::P256_from_montgomery(&raw mut array, &raw const array as _) };
+
+        array
+    }
+}
+
+impl core::ops::Index<usize> for Montgomery {
+    type Output = u32;
+
+    fn index(&self, index: usize) -> &Self::Output {
+        &self.0[index]
+    }
+}
+
+impl Default for Montgomery {
+    fn default() -> Self {
+        Self::zero()
+    }
+}
+
 /// Checks that the argument, as little-endian integer,
 /// is a reduced non-zero element of the scalar field.
 ///

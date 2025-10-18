@@ -12,7 +12,8 @@ pub(crate) mod jacobian;
 pub use jacobian::P256_double_j;
 
 pub(crate) mod montgomery;
-pub use montgomery::{Montgomery, P256_from_montgomery, P256_to_montgomery};
+pub use montgomery::Montgomery;
+use montgomery::{P256_from_montgomery, P256_to_montgomery};
 
 mod sqrt;
 pub(crate) use sqrt::P256_modinv_sqrt;
