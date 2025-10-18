@@ -103,3 +103,18 @@ pub(crate) fn add_sub_j(a: &mut [Montgomery; 3], b: &[Montgomery; 3], is_sub: bo
     // for writes, and `b` has the correct length (3) for the value of `b_is_affine`.
     unsafe { asm::jacobian::P256_add_sub_j(a, b.as_ptr(), is_sub, false) }
 }
+
+#[inline(always)]
+pub(crate) fn double_j(jacobian_out: &mut [Montgomery; 3], jacobian_in: &[Montgomery; 3]) {
+    // SAFETY: `jacobian_out` and `jacobian_in` are valid for the duration of the
+    // function call, and `jacobian_out` is valid for writes.
+    unsafe { asm::jacobian::P256_double_j(jacobian_out, jacobian_in) };
+}
+
+#[inline(always)]
+pub(crate) fn double_j_inplace(jacobian: &mut [Montgomery; 3]) {
+    // SAFETY: `jacobian` is valid for the duration of the functino call,
+    // `jacobian` is valid for writes. Additionally, the read and write pointers
+    // passed to `P256_double_j` may overlap.
+    unsafe { asm::jacobian::P256_double_j(jacobian, jacobian) };
+}
