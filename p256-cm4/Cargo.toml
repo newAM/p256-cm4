@@ -23,3 +23,4 @@ fpu = [ ]
 cfg-if = { version = "1.0.3", default-features = false }
 defmt = { version = "1.0", optional = true }
 p256 = { version = "0.14.0-rc.0", default-features = false, features = [ "ecdsa" ], optional = true }
+signature = { version = "3.0.0-rc.4", features = ["digest"], optional = true }
