@@ -1,5 +1,7 @@
 use core::arch::naked_asm;
 
+use super::Montgomery;
+
 /// Given two 288 bit numbers `a` and `b`, calculate `a * b`.
 ///
 /// # Inputs
@@ -295,9 +297,9 @@ pub(in crate::sys) unsafe extern "C" fn P256_negate_mod_n_if(
 /// 2. Else, copy `a`.
 ///
 /// # Inputs
-/// `r0` shall contain a valid `*mut [u32; 8]`.
+/// `r0` shall contain a valid [`*mut Montgomery`](Montgomery).
 ///
-/// `r1` shall contain `a`, a valid `*const [u32; 8]`, where `1 <= a <= p - 1`.
+/// `r1` shall contain `a`, a valid [`*const Montgomery`](Montgomery), where `1 <= a <= p - 1`.
 ///
 /// `r2` shall contain `should_negate`, a `u32` that is either 1 or 0.
 ///
@@ -311,8 +313,8 @@ pub(in crate::sys) unsafe extern "C" fn P256_negate_mod_n_if(
 #[unsafe(no_mangle)]
 #[unsafe(link_section = ".p256-cortex-m4")]
 pub unsafe extern "C" fn P256_negate_mod_p_if(
-    out: *mut [u32; 8],
-    inn: *const [u32; 8],
+    out: *mut Montgomery,
+    inn: *const Montgomery,
     should_negate: u32,
 ) {
     naked_asm!(
