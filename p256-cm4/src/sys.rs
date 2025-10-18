@@ -118,3 +118,10 @@ pub(crate) fn double_j_inplace(jacobian: &mut [Montgomery; 3]) {
     // passed to `P256_double_j` may overlap.
     unsafe { asm::jacobian::P256_double_j(jacobian, jacobian) };
 }
+
+#[inline(always)]
+pub fn jacobian_to_affine(x: &mut Montgomery, y: &mut Montgomery, jacobian: &[Montgomery; 3]) {
+    // SAFETY: `x`, `y` and `jacobian` are valid for the duration of the function call,
+    // `x` and `y` are valid for writes.
+    unsafe { asm::jacobian::P256_jacobian_to_affine(x, y, jacobian) };
+}

@@ -540,7 +540,11 @@ pub(in crate::sys) unsafe extern "C" fn P256_add_sub_j(
 /// # Return
 /// On return, the locations pointed to by the input `r0` and `r0` will contain the results of the operation.
 ///
-/// > **Note**: `r0` will be overriden during the execution of this function (it is callee-saved).
+/// # Safety
+/// The caller must guarantee that `x`, `y` and `a` are valid for the duration of the function
+/// call, and that `x` and `y` are valid for writes.
+///
+/// > **Note**: This function adheres to the ARM calling convention.
 #[unsafe(naked)]
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn P256_jacobian_to_affine(

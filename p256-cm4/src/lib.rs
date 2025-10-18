@@ -6,10 +6,12 @@ mod sys;
 use crate::sys::asm::{
     P256_add_mod_n, P256_decompress_point, P256_divsteps2_31, P256_matrix_mul_fg_9, P256_mul_mod_n,
     P256_negate_mod_p_if, P256_point_is_on_curve, P256_reduce_mod_n_32bytes, P256_verify_last_step,
-    jacobian::P256_jacobian_to_affine,
 };
 
-use sys::{Montgomery, add_sub_j, add_sub_j_affine, double_j, double_j_inplace, negate_mod_n_if};
+use sys::{
+    Montgomery, add_sub_j, add_sub_j_affine, double_j, double_j_inplace, jacobian_to_affine,
+    negate_mod_n_if,
+};
 pub use sys::{check_range_n, check_range_p};
 
 // This table contains 1G, 3G, 5G, ... 15G in affine coordinates in montgomery form
@@ -252,7 +254,8 @@ fn scalarmult_variable_base(
         // attacker could easily test this case anyway.
         add_sub_j(&mut current_point, &selected_point, false);
     });
-    unsafe { P256_jacobian_to_affine(output_mont_x, output_mont_y, &current_point) };
+
+    jacobian_to_affine(output_mont_x, output_mont_y, &current_point);
 
     // If the scalar was initially even, we now negate the result to get the correct result, since -(scalar*G) = (-scalar*G).
     // This is done by negating y, since -(x,y) = (x,-y).
@@ -424,7 +427,7 @@ fn scalarmult_fixed_base(output_x: &mut Montgomery, output_y: &mut Montgomery, s
         }
     }
 
-    unsafe { P256_jacobian_to_affine(output_x, output_y, &current_point) };
+    jacobian_to_affine(output_x, output_y, &current_point);
 
     // Negate final result if the scalar was initially even.
     unsafe {
