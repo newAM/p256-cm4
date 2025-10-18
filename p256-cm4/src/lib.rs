@@ -7,6 +7,9 @@ mod sys;
 #[cfg(feature = "p256")]
 mod p256;
 
+#[cfg(feature = "signature")]
+mod signature;
+
 pub use raw::*;
 
 use crate::sys::Montgomery;
