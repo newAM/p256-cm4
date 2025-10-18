@@ -1,16 +1,15 @@
 #![no_std]
 #![allow(clippy::missing_safety_doc)]
 
-use crate::asm::{
+mod sys;
+
+use crate::sys::asm::{
     P256_add_mod_n, P256_check_range_n, P256_check_range_p, P256_decompress_point,
     P256_divsteps2_31, P256_double_j, P256_from_montgomery, P256_matrix_mul_fg_9, P256_mul_mod_n,
     P256_negate_mod_n_if, P256_negate_mod_p_if, P256_point_is_on_curve, P256_reduce_mod_n_32bytes,
     P256_to_montgomery, P256_verify_last_step,
     jacobian::{P256_add_sub_j, P256_jacobian_to_affine},
 };
-
-#[cfg(target_arch = "arm")]
-mod asm;
 
 const ONE_MONTGOMERY: [u32; 8] = [1, 0, 0, 0xffffffff, 0xffffffff, 0xffffffff, 0xfffffffe, 0];
 
@@ -868,7 +867,7 @@ fn mod_n_inv(res: &mut [u32; 8], a: &[u32; 8]) {
     state[0].fg[0].flip_sign = 0; // non-negative f
     state[0].fg[0]
         .signed_value
-        .copy_from_slice(&asm::P256_ORDER); // f
+        .copy_from_slice(&sys::asm::P256_ORDER); // f
     state[0].fg[1].flip_sign = 0; // non-negative g
     state[0].fg[1].signed_value[..8].copy_from_slice(a); // g
     state[0].fg[1].signed_value[8] = 0; // upper bits of g are 0
@@ -914,7 +913,7 @@ fn mod_n_inv(res: &mut [u32; 8], a: &[u32; 8]) {
         // Iterate the result vector
         // Due to montgomery multiplication inside this function, each step also adds a 2^-32 factor
         unsafe {
-            crate::asm::P256_matrix_mul_mod_n(
+            sys::asm::P256_matrix_mul_mod_n(
                 matrix[0],
                 matrix[1],
                 &state[i % 2].xy,
@@ -922,7 +921,7 @@ fn mod_n_inv(res: &mut [u32; 8], a: &[u32; 8]) {
             )
         };
         unsafe {
-            crate::asm::P256_matrix_mul_mod_n(
+            sys::asm::P256_matrix_mul_mod_n(
                 matrix[2],
                 matrix[3],
                 &state[i % 2].xy,

@@ -1,6 +1,6 @@
 use core::arch::naked_asm;
 
-use crate::asm::Montgomery;
+use crate::sys::asm::Montgomery;
 
 /// Doubles a point in Jacobian form (with integers Montgomery form).
 ///

@@ -1,6 +1,6 @@
 use core::arch::naked_asm;
 
-use crate::asm::util::mul288x288;
+use crate::sys::asm::util::mul288x288;
 
 /// Given 288-bit value `a` and `n`, the P256 order:
 /// 1. if `a >= n`, calculate `a - n`

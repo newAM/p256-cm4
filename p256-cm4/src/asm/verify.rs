@@ -1,6 +1,6 @@
 use core::arch::naked_asm;
 
-use crate::asm::montgomery::Montgomery;
+use crate::sys::asm::montgomery::Montgomery;
 
 /// Perform the last step of verifying a P256 signature.
 ///
