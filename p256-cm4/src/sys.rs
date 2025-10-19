@@ -156,3 +156,13 @@ pub fn mul_mod_n_in_place(op: &mut [u32; 8], a: &[u32; 8]) {
     // The read and write pointers are allowed to overlap.
     unsafe { asm::mulmod::P256_mul_mod_n(op, a, op) }
 }
+
+/// Calculate `op = op + a mod n`, where `n` is the `p256`
+/// order.
+#[inline(always)]
+pub fn add_mod_n_in_place(op: &mut [u32; 8], a: &[u32; 8]) {
+    // SAFETY: `op` and `a` are valid for the duration of the
+    // function call, and `op` is valid for writes.
+    // The read and write pointers are allowed to overlap.
+    unsafe { asm::add_sub::P256_add_mod_n(op, a, op) };
+}
