@@ -13,10 +13,16 @@ use crate::sys::asm::montgomery::Montgomery;
 ///
 /// # Return
 /// On return, `r0` will contain `1` if the check passes, and `0` otherwise.
+///
+/// # Safety
+/// The caller must guarantee that `r` and `x` are valid for the duration of the function
+/// call.
+///
+/// > **Note**: This function adheres to the ARM calling convention.
 #[unsafe(no_mangle)]
 #[unsafe(naked)]
 #[unsafe(link_section = ".p256-cortex-m4")]
-pub unsafe extern "C" fn P256_verify_last_step(
+pub(in crate::sys) unsafe extern "C" fn P256_verify_last_step(
     r: *const [u32; 8],
     x: *const [Montgomery; 3],
 ) -> bool {

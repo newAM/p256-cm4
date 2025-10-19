@@ -177,3 +177,8 @@ pub fn negate_mod_p_if_in_place(a: &mut Montgomery, should_negate: bool) {
     // valid for writes. The read and write pointers are allowed to overlap.
     unsafe { asm::P256_negate_mod_p_if(a, a, should_negate as _) };
 }
+
+#[inline(always)]
+pub fn verify_last_step(r: &[u32; 8], x: &[Montgomery; 3]) -> bool {
+    unsafe { asm::verify::P256_verify_last_step(r, x) }
+}
