@@ -4,7 +4,10 @@ pub(crate) mod asm;
 
 pub use asm::montgomery::Montgomery;
 
-use crate::sys::asm::{P256_decompress_point, matrix::P256_divsteps2_31};
+use crate::{
+    FGInteger,
+    sys::asm::{P256_decompress_point, matrix::P256_divsteps2_31},
+};
 
 impl Montgomery {
     /// Set the contents of `self` to the montgomery representation
@@ -199,4 +202,11 @@ pub fn reduce_mod_n_32bytes_in_place(op: &mut [u32; 8]) {
     // The read and write pointer in this function are allowed
     // to overlap.
     unsafe { asm::reduce::P256_reduce_mod_n_32bytes(op, op) };
+}
+
+#[inline(always)]
+pub fn matrix_mul_fg_9(a: u32, b: u32, fg: &[FGInteger; 2], res: &mut FGInteger) {
+    // SAFETY: `fg` and `res` are valid for the duration of the function
+    // call, and `res` is valid for writes.
+    unsafe { asm::matrix::P256_matrix_mul_fg_9(a, b, fg, res) }
 }

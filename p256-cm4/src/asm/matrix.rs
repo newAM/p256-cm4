@@ -313,9 +313,15 @@ pub(in crate::sys) unsafe extern "C" fn P256_divsteps2_31(
 ///
 /// # Return
 /// On return, the dereference of the input value of `r3` will contain the result of the operation.
+///
+/// # Safety
+/// The caller must guarantee that `fg` and `res` are valid for the duration of the function call,
+/// and that `res` is valid for writes.
+///
+/// > **Note**: This function adheres to the ARM calling convention.
 #[unsafe(naked)]
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn P256_matrix_mul_fg_9(
+pub(in crate::sys) unsafe extern "C" fn P256_matrix_mul_fg_9(
     a: u32,
     b: u32,
     fg: *const [FGInteger; 2],

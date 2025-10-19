@@ -3,12 +3,11 @@
 
 mod sys;
 
-use crate::sys::asm::P256_matrix_mul_fg_9;
-
 use sys::{
     Montgomery, add_mod_n_in_place, add_sub_j, add_sub_j_affine, decompress_point, divsteps2_31,
-    double_j, double_j_inplace, jacobian_to_affine, mul_mod_n, mul_mod_n_in_place, negate_mod_n_if,
-    negate_mod_p_if_in_place, point_is_on_curve, reduce_mod_n_32bytes_in_place, verify_last_step,
+    double_j, double_j_inplace, jacobian_to_affine, matrix_mul_fg_9, mul_mod_n, mul_mod_n_in_place,
+    negate_mod_n_if, negate_mod_p_if_in_place, point_is_on_curve, reduce_mod_n_32bytes_in_place,
+    verify_last_step,
 };
 pub use sys::{check_range_n, check_range_p};
 
@@ -802,40 +801,17 @@ fn mod_n_inv(res: &mut [u32; 8], a: &[u32; 8]) {
         );
 
         // "Jump step", calculates the new f and g values that applies after 31 divstep2 iterations
-        unsafe {
-            P256_matrix_mul_fg_9(
-                matrix[0],
-                matrix[1],
-                &state[i % 2].fg,
-                &mut state[(i + 1) % 2].fg[0],
-            )
-        };
-        unsafe {
-            P256_matrix_mul_fg_9(
-                matrix[2],
-                matrix[3],
-                &state[i % 2].fg,
-                &mut state[(i + 1) % 2].fg[1],
-            )
-        };
+        let [i, i_plus_one] = state.get_disjoint_mut([i % 2, (i + 1) % 2]).unwrap();
+        matrix_mul_fg_9(matrix[0], matrix[1], &i.fg, &mut i_plus_one.fg[0]);
+        matrix_mul_fg_9(matrix[2], matrix[3], &i.fg, &mut i_plus_one.fg[1]);
 
         // Iterate the result vector
         // Due to montgomery multiplication inside this function, each step also adds a 2^-32 factor
         unsafe {
-            sys::asm::P256_matrix_mul_mod_n(
-                matrix[0],
-                matrix[1],
-                &state[i % 2].xy,
-                &mut state[(i + 1) % 2].xy[0],
-            )
+            sys::asm::P256_matrix_mul_mod_n(matrix[0], matrix[1], &i.xy, &mut i_plus_one.xy[0])
         };
         unsafe {
-            sys::asm::P256_matrix_mul_mod_n(
-                matrix[2],
-                matrix[3],
-                &state[i % 2].xy,
-                &mut state[(i + 1) % 2].xy[1],
-            )
+            sys::asm::P256_matrix_mul_mod_n(matrix[2], matrix[3], &i.xy, &mut i_plus_one.xy[1])
         };
     });
 
