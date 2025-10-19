@@ -219,9 +219,20 @@ pub unsafe extern "C" fn P256_matrix_mul_mod_n(
 /// # Return
 /// On return, `r0` will contain `delta`, and the dereference of the input value of `r3` shall contain the result
 /// of the computation.
+///
+/// # Safety
+/// The caller must guarantee that `res`, is valid for the duration
+/// of the function call, and that `res` is valid for writes.
+///
+/// > **Note**: This function adheres to the ARM calling convention.
 #[unsafe(no_mangle)]
 #[unsafe(naked)]
-pub unsafe extern "C" fn P256_divsteps2_31(delta: i32, f: u32, g: u32, res: *mut [u32; 4]) -> i32 {
+pub(in crate::sys) unsafe extern "C" fn P256_divsteps2_31(
+    delta: i32,
+    f: u32,
+    g: u32,
+    res: *mut [u32; 4],
+) -> i32 {
     naked_asm!(
         "
             push {r3, r4-r8, lr}

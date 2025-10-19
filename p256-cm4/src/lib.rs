@@ -3,11 +3,11 @@
 
 mod sys;
 
-use crate::sys::asm::{P256_divsteps2_31, P256_matrix_mul_fg_9, P256_reduce_mod_n_32bytes};
+use crate::sys::asm::{P256_matrix_mul_fg_9, P256_reduce_mod_n_32bytes};
 
 use sys::{
-    Montgomery, add_mod_n_in_place, add_sub_j, add_sub_j_affine, decompress_point, double_j,
-    double_j_inplace, jacobian_to_affine, mul_mod_n, mul_mod_n_in_place, negate_mod_n_if,
+    Montgomery, add_mod_n_in_place, add_sub_j, add_sub_j_affine, decompress_point, divsteps2_31,
+    double_j, double_j_inplace, jacobian_to_affine, mul_mod_n, mul_mod_n_in_place, negate_mod_n_if,
     negate_mod_p_if_in_place, point_is_on_curve, verify_last_step,
 };
 pub use sys::{check_range_n, check_range_p};
@@ -789,19 +789,17 @@ fn mod_n_inv(res: &mut [u32; 8], a: &[u32; 8]) {
     let mut delta: i32 = 1;
     (0..24).for_each(|i| {
         // Scaled translation matrix Ti
-        let mut matrix: [u32; 4] = [0; 4]; // element range: [-2^30, 2^31] (negative numbers are stored in two's complement form)
+        let mut matrix = [0u32; 4]; // element range: [-2^30, 2^31] (negative numbers are stored in two's complement form)
 
         // Decode f and g into two's complement representation and use the lowest 32 bits in the P256_divsteps2_31 calculation
-        let negate_f: u32 = state[i % 2].fg[0].flip_sign as u32;
-        let negate_g: u32 = state[i % 2].fg[1].flip_sign as u32;
-        delta = unsafe {
-            P256_divsteps2_31(
-                delta,
-                (state[i % 2].fg[0].signed_value[0] ^ negate_f).wrapping_sub(negate_f),
-                (state[i % 2].fg[1].signed_value[0] ^ negate_g).wrapping_sub(negate_g),
-                &raw mut matrix,
-            )
-        };
+        let negate_f = state[i % 2].fg[0].flip_sign as u32;
+        let negate_g = state[i % 2].fg[1].flip_sign as u32;
+        delta = divsteps2_31(
+            delta,
+            (state[i % 2].fg[0].signed_value[0] ^ negate_f).wrapping_sub(negate_f),
+            (state[i % 2].fg[1].signed_value[0] ^ negate_g).wrapping_sub(negate_g),
+            &mut matrix,
+        );
 
         // "Jump step", calculates the new f and g values that applies after 31 divstep2 iterations
         unsafe {
