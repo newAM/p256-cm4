@@ -777,7 +777,7 @@ fn mod_n_inv(res: &mut [u32; 8], a: &[u32; 8]) {
     state[0].fg[0].flip_sign = 0; // non-negative f
     state[0].fg[0]
         .signed_value
-        .copy_from_slice(&sys::asm::P256_ORDER); // f
+        .copy_from_slice(&sys::P256_ORDER); // f
     state[0].fg[1].flip_sign = 0; // non-negative g
     state[0].fg[1].signed_value[..8].copy_from_slice(a); // g
     state[0].fg[1].signed_value[8] = 0; // upper bits of g are 0
