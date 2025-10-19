@@ -166,3 +166,14 @@ pub fn add_mod_n_in_place(op: &mut [u32; 8], a: &[u32; 8]) {
     // The read and write pointers are allowed to overlap.
     unsafe { asm::add_sub::P256_add_mod_n(op, a, op) };
 }
+
+/// If `should_negate`, calculate `a = p - a`. Otherwise, this function
+/// is a no-op (but probably does constant-time things).
+///
+/// `1 <= 1 <= p - 1` must hold.
+#[inline(always)]
+pub fn negate_mod_p_if_in_place(a: &mut Montgomery, should_negate: bool) {
+    // SAFETY: `a` is valid for the duration of the function call, and is
+    // valid for writes. The read and write pointers are allowed to overlap.
+    unsafe { asm::P256_negate_mod_p_if(a, a, should_negate as _) };
+}
