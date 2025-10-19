@@ -4,6 +4,8 @@ pub(crate) mod asm;
 
 pub use asm::montgomery::Montgomery;
 
+use crate::sys::asm::P256_decompress_point;
+
 impl Montgomery {
     /// Set the contents of `self` to the montgomery representation
     /// of the little-endian integer `normal`.
@@ -130,4 +132,11 @@ pub fn jacobian_to_affine(x: &mut Montgomery, y: &mut Montgomery, jacobian: &[Mo
 pub fn point_is_on_curve(x: &Montgomery, y: &Montgomery) -> bool {
     // SAFETY: `x` and `y` are valid for the duration of the function call.
     unsafe { asm::P256_point_is_on_curve(x, y) }
+}
+
+#[inline(always)]
+pub fn decompress_point(y: &mut [u32; 8], x: &[u32; 8], odd: bool) -> bool {
+    // SAFTEY: `x` and `y` are valid for the duration of the function
+    // call, and `y` ìs valid for writes.
+    unsafe { P256_decompress_point(y, x, odd as _) }
 }

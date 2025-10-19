@@ -261,13 +261,14 @@ pub unsafe extern "C" fn P256_sqrmod_many_and_mulmod() {
 ///
 ///
 /// # SAFETY
-/// The caller must guarantee that `x` and `y` are valid.
+/// The caller must guarantee that `x` and `y` are valid for the duration of the
+/// function call, and that `y` is valid for writes.
 ///
-/// This function adheres to the ARM calling convention.
+/// > **Note**: This function adheres to the ARM calling convention.
 #[unsafe(no_mangle)]
 #[unsafe(link_section = ".p256-cortex-m4")]
 #[unsafe(naked)]
-pub unsafe extern "C" fn P256_decompress_point(
+pub(in crate::sys) unsafe extern "C" fn P256_decompress_point(
     y: *mut [u32; 8],
     x: *const [u32; 8],
     parity: u32,
