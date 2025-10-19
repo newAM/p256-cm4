@@ -3,14 +3,12 @@
 
 mod sys;
 
-use crate::sys::asm::{
-    P256_divsteps2_31, P256_matrix_mul_fg_9, P256_reduce_mod_n_32bytes, P256_verify_last_step,
-};
+use crate::sys::asm::{P256_divsteps2_31, P256_matrix_mul_fg_9, P256_reduce_mod_n_32bytes};
 
 use sys::{
     Montgomery, add_mod_n_in_place, add_sub_j, add_sub_j_affine, decompress_point, double_j,
     double_j_inplace, jacobian_to_affine, mul_mod_n, mul_mod_n_in_place, negate_mod_n_if,
-    negate_mod_p_if_in_place, point_is_on_curve,
+    negate_mod_p_if_in_place, point_is_on_curve, verify_last_step,
 };
 pub use sys::{check_range_n, check_range_p};
 
@@ -733,7 +731,7 @@ pub fn verify(
             }
         });
 
-    unsafe { P256_verify_last_step(&raw const *r, &raw const cp as _) }
+    verify_last_step(r, &cp)
 }
 
 #[repr(C)]
