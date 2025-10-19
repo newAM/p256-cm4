@@ -3,12 +3,12 @@
 
 mod sys;
 
-use crate::sys::asm::{P256_matrix_mul_fg_9, P256_reduce_mod_n_32bytes};
+use crate::sys::asm::P256_matrix_mul_fg_9;
 
 use sys::{
     Montgomery, add_mod_n_in_place, add_sub_j, add_sub_j_affine, decompress_point, divsteps2_31,
     double_j, double_j_inplace, jacobian_to_affine, mul_mod_n, mul_mod_n_in_place, negate_mod_n_if,
-    negate_mod_p_if_in_place, point_is_on_curve, verify_last_step,
+    negate_mod_p_if_in_place, point_is_on_curve, reduce_mod_n_32bytes_in_place, verify_last_step,
 };
 pub use sys::{check_range_n, check_range_p};
 
@@ -527,7 +527,7 @@ pub fn sign_step1(result: &mut SignPrecomp, k: &[u32; 8]) -> bool {
         mod_n_inv(&mut result.k_inv, k);
 
         output_x.write(&mut result.r);
-        unsafe { P256_reduce_mod_n_32bytes(&raw mut result.r, &raw const result.r) };
+        reduce_mod_n_32bytes_in_place(&mut result.r);
 
         let r_sum: u32 = (0..8).fold(0, |r_sum, i| r_sum | result.r[i]);
         if r_sum == 0 {
