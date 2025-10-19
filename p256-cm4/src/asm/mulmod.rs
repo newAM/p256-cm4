@@ -520,10 +520,14 @@ pub unsafe extern "C" fn P256_mulmod() {
 /// # Returns
 /// On return, the dereference of the input value of `r0` will contain the result of the computation.
 ///
-/// > **Note**: `r0` will be overriden during the execution of this function (it is callee-saved).
+/// # Safety
+/// The caller must guarantee that `res`, `a` and `b` are valid for the duration
+/// of the function call, and that `res` is valid for writes.
+///
+/// > **Note**: This function adheres to the ARM calling convention.
 #[unsafe(naked)]
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn P256_mul_mod_n(
+pub(in crate::sys) unsafe extern "C" fn P256_mul_mod_n(
     res: *mut [u32; 8],
     a: *const [u32; 8],
     b: *const [u32; 8],
