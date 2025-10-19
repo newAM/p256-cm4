@@ -123,7 +123,7 @@ pub unsafe extern "C" fn P256_addmod() {
 /// > **Note**: `r0` will be overriden during the execution of this function (it is callee-saved).
 #[unsafe(no_mangle)]
 #[unsafe(naked)]
-pub unsafe extern "C" fn P256_add_mod_n(
+pub(in crate::sys) unsafe extern "C" fn P256_add_mod_n(
     res: *mut [u32; 8],
     a: *const [u32; 8],
     b: *const [u32; 8],
