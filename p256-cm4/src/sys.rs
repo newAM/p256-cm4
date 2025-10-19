@@ -4,7 +4,7 @@ pub(crate) mod asm;
 
 pub use asm::montgomery::Montgomery;
 
-use crate::sys::asm::P256_decompress_point;
+use crate::sys::asm::{P256_decompress_point, matrix::P256_divsteps2_31};
 
 impl Montgomery {
     /// Set the contents of `self` to the montgomery representation
@@ -180,5 +180,14 @@ pub fn negate_mod_p_if_in_place(a: &mut Montgomery, should_negate: bool) {
 
 #[inline(always)]
 pub fn verify_last_step(r: &[u32; 8], x: &[Montgomery; 3]) -> bool {
+    // SAFETY: `r` and `x` are valid for the duration of the function
+    // call.
     unsafe { asm::verify::P256_verify_last_step(r, x) }
+}
+
+#[inline(always)]
+pub fn divsteps2_31(delta: i32, f: u32, g: u32, res: &mut [u32; 4]) -> i32 {
+    // SAFETY: `res` is valid for the duration of the function call,
+    // and is valid for writes.
+    unsafe { P256_divsteps2_31(delta, f, g, res) }
 }
