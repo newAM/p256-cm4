@@ -67,9 +67,18 @@ pub unsafe extern "C" fn P256_reduce_mod_n_once() {
 ///
 /// # Return
 /// On return, the dereference of the input value of `r0` shall contain the result of the computation.
+///
+/// # Safety
+/// The caller must guarantee that `res` and `a` are valid for the duration of the function call,
+/// and that `res` is valid for writes.
+///
+/// > **Note**: This function adheres to the ARM calling convention.
 #[unsafe(naked)]
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn P256_reduce_mod_n_32bytes(res: *mut [u32; 8], a: *const [u32; 8]) {
+pub(in crate::sys) unsafe extern "C" fn P256_reduce_mod_n_32bytes(
+    res: *mut [u32; 8],
+    a: *const [u32; 8],
+) {
     naked_asm!(
         "
             push {{r0, r4-r11, lr}}

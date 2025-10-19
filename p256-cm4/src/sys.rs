@@ -191,3 +191,12 @@ pub fn divsteps2_31(delta: i32, f: u32, g: u32, res: &mut [u32; 4]) -> i32 {
     // and is valid for writes.
     unsafe { P256_divsteps2_31(delta, f, g, res) }
 }
+
+#[inline(always)]
+pub fn reduce_mod_n_32bytes_in_place(op: &mut [u32; 8]) {
+    // sAFETY: `op` is valid for the duration of the function
+    // call, and is valid for writes.
+    // The read and write pointer in this function are allowed
+    // to overlap.
+    unsafe { asm::reduce::P256_reduce_mod_n_32bytes(op, op) };
+}

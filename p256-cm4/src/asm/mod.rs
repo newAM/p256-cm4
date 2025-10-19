@@ -31,10 +31,8 @@ pub(super) use util::{
 };
 pub use util::{add_sub_helper, mul288x288};
 
-mod reduce;
-pub(crate) use reduce::{
-    P256_reduce_mod_n_32bytes, P256_reduce_mod_n_64bytes, P256_reduce_mod_n_once,
-};
+pub mod reduce;
+pub(crate) use reduce::{P256_reduce_mod_n_64bytes, P256_reduce_mod_n_once};
 
 /// The order of the P256 curve.
 ///
