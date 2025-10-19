@@ -1,6 +1,8 @@
 #[path = "./asm/mod.rs"]
 #[cfg(target_arch = "arm")]
-pub(crate) mod asm;
+mod asm;
+
+pub(crate) use asm::P256_ORDER;
 
 pub use asm::montgomery::Montgomery;
 
