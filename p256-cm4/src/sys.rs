@@ -140,3 +140,19 @@ pub fn decompress_point(y: &mut [u32; 8], x: &[u32; 8], odd: bool) -> bool {
     // call, and `y` ìs valid for writes.
     unsafe { P256_decompress_point(y, x, odd as _) }
 }
+
+#[inline(always)]
+pub fn mul_mod_n(res: &mut [u32; 8], a: &[u32; 8], b: &[u32; 8]) {
+    // SAFETY: `res`, `a` and `b` are valid for the duration of the
+    // function call, and `res` is valid for writes.
+    unsafe { asm::mulmod::P256_mul_mod_n(res, a, b) }
+}
+
+/// Perform `mul_mod_n(op, a, op)`.
+#[inline(always)]
+pub fn mul_mod_n_in_place(op: &mut [u32; 8], a: &[u32; 8]) {
+    // SAFETY: `op` and `a` are valid for the duration of the
+    // function call, and `op` is valid for writes.
+    // The read and write pointers are allowed to overlap.
+    unsafe { asm::mulmod::P256_mul_mod_n(op, a, op) }
+}

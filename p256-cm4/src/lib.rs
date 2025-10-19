@@ -4,13 +4,13 @@
 mod sys;
 
 use crate::sys::asm::{
-    P256_add_mod_n, P256_divsteps2_31, P256_matrix_mul_fg_9, P256_mul_mod_n, P256_negate_mod_p_if,
+    P256_add_mod_n, P256_divsteps2_31, P256_matrix_mul_fg_9, P256_negate_mod_p_if,
     P256_reduce_mod_n_32bytes, P256_verify_last_step,
 };
 
 use sys::{
     Montgomery, add_sub_j, add_sub_j_affine, decompress_point, double_j, double_j_inplace,
-    jacobian_to_affine, negate_mod_n_if, point_is_on_curve,
+    jacobian_to_affine, mul_mod_n, mul_mod_n_in_place, negate_mod_n_if, point_is_on_curve,
 };
 pub use sys::{check_range_n, check_range_p};
 
@@ -595,9 +595,9 @@ pub fn sign_step2(
             break;
         }
         hash_to_z(u32x8_to_u8x32_mut(r), hash);
-        unsafe { P256_mul_mod_n(s, &sign_precomp.r, private_key) };
+        mul_mod_n(s, &sign_precomp.r, private_key);
         unsafe { P256_add_mod_n(s, r, s) };
-        unsafe { P256_mul_mod_n(s, &sign_precomp.k_inv, s) };
+        mul_mod_n_in_place(s, &sign_precomp.k_inv);
 
         r.copy_from_slice(&sign_precomp.r);
 
@@ -701,9 +701,9 @@ pub fn verify(
     mod_n_inv(&mut w, s);
 
     let mut u1: [u32; 8] = [0; 8];
-    unsafe { P256_mul_mod_n(&mut u1, &z, &w) };
+    mul_mod_n(&mut u1, &z, &w);
     let mut u2: [u32; 8] = [0; 8];
-    unsafe { P256_mul_mod_n(&mut u2, r, &w) };
+    mul_mod_n(&mut u2, r, &w);
 
     // Each value in these arrays will be an odd integer v, so that -15 <= v <= 15.
     // Around 1/5.5 of them will be non-zero.
