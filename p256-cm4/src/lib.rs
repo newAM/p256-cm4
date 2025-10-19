@@ -5,9 +5,9 @@ mod sys;
 
 use sys::{
     Montgomery, add_mod_n_in_place, add_sub_j, add_sub_j_affine, decompress_point, divsteps2_31,
-    double_j, double_j_inplace, jacobian_to_affine, matrix_mul_fg_9, mul_mod_n, mul_mod_n_in_place,
-    negate_mod_n_if, negate_mod_p_if_in_place, point_is_on_curve, reduce_mod_n_32bytes_in_place,
-    verify_last_step,
+    double_j, double_j_inplace, jacobian_to_affine, matrix_mul_fg_9, matrix_mul_mod_n, mul_mod_n,
+    mul_mod_n_in_place, negate_mod_n_if, negate_mod_p_if_in_place, point_is_on_curve,
+    reduce_mod_n_32bytes_in_place, verify_last_step,
 };
 pub use sys::{check_range_n, check_range_p};
 
@@ -807,12 +807,8 @@ fn mod_n_inv(res: &mut [u32; 8], a: &[u32; 8]) {
 
         // Iterate the result vector
         // Due to montgomery multiplication inside this function, each step also adds a 2^-32 factor
-        unsafe {
-            sys::asm::P256_matrix_mul_mod_n(matrix[0], matrix[1], &i.xy, &mut i_plus_one.xy[0])
-        };
-        unsafe {
-            sys::asm::P256_matrix_mul_mod_n(matrix[2], matrix[3], &i.xy, &mut i_plus_one.xy[1])
-        };
+        matrix_mul_mod_n(matrix[0], matrix[1], &i.xy, &mut i_plus_one.xy[0]);
+        matrix_mul_mod_n(matrix[2], matrix[3], &i.xy, &mut i_plus_one.xy[1]);
     });
 
     // Calculates val^-1 = sgn(f) * v * 2^-744, where v is the "top-right corner" of the resulting T24*T23*...*T1 matrix.

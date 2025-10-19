@@ -5,7 +5,7 @@ pub(crate) mod asm;
 pub use asm::montgomery::Montgomery;
 
 use crate::{
-    FGInteger,
+    FGInteger, XYInteger,
     sys::asm::{P256_decompress_point, matrix::P256_divsteps2_31},
 };
 
@@ -209,4 +209,14 @@ pub fn matrix_mul_fg_9(a: u32, b: u32, fg: &[FGInteger; 2], res: &mut FGInteger)
     // SAFETY: `fg` and `res` are valid for the duration of the function
     // call, and `res` is valid for writes.
     unsafe { asm::matrix::P256_matrix_mul_fg_9(a, b, fg, res) }
+}
+
+/// For MatrixElements `a` and `b`, and [`XYInteger`] `x` and `y`,
+/// compute `a * x + b * y mod N` (where N is the order of the p256 curve)
+/// and store the result in `out`.
+#[inline(always)]
+pub fn matrix_mul_mod_n(a: u32, b: u32, xy: &[XYInteger; 2], out: &mut XYInteger) {
+    // SAFETY: `out` and `xy` are valid for the duration of the function call, and
+    // `out` is valid for writes.
+    unsafe { asm::matrix::P256_matrix_mul_mod_n(a, b, xy, out) }
 }

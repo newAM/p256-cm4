@@ -24,12 +24,15 @@ struct MatrixElement(u32);
 /// # Return
 /// On return, the dereference of the input value of `r3` will contain the result of the computation.
 ///
-/// > **Note**: `r3` will be overriden during the execution of this function (it is callee-saved).
+/// # Safety
+/// The caller must guarantee that `out` and `xy` are valid for the duration of the function call,
+/// and that `out` is valid for writes.
+///
+/// > **Note**: This function adheres to the ARM calling convention.
 // TODO: replace `u32` with `MatrixElement`.
 #[unsafe(no_mangle)]
-// TODO: can we get rid of this `naked`? In theory, this function adheres to the ARM calling convention.
 #[unsafe(naked)]
-pub unsafe extern "C" fn P256_matrix_mul_mod_n(
+pub(in crate::sys) unsafe extern "C" fn P256_matrix_mul_mod_n(
     a: u32,
     b: u32,
     xy: *const [crate::XYInteger; 2],
