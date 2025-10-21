@@ -2,7 +2,7 @@
 
 [![CI](https://github.com/newAM/p256-cm4/workflows/CI/badge.svg)](https://github.com/newAM/p256-cm4/actions)
 [![crates.io](https://img.shields.io/crates/v/p256-cm4.svg)](https://crates.io/crates/p256-cm4)
-[![docs](https://docs.rs/p256-cm4/badge.svg)](https://docs.rs/p256-cm4) 
+[![docs](https://docs.rs/p256-cm4/badge.svg)](https://docs.rs/p256-cm4)
 
 A (mostly) rust re-implementation of [Emill/P256-Cortex-M4].
 
@@ -28,20 +28,10 @@ As measured on a STM32WLE5.
 
 ### Testing
 
-Install [probe-rs-tools].
-
-Adjust `.cargo/config.toml`, `memory.x`, `testsuite/Cargo.toml`, and the clock setup for your target.
+Install [qemu-system-arm] (tested to work with `qemu-system-arm 8.2.2`).
 
 ```bash
-DEFMT_LOG=trace cargo test -p testsuite
-```
-
-### ASM Generation
-
-Send the GCC ASM from [Emill/P256-Cortex-M4] through the pre-processor.
-
-```bash
-arm-none-eabi-gcc -O0 -ffunction-sections -fdata-sections -g -fno-omit-frame-pointer -mthumb -march=armv7e-m -Wall -Wextra -std=c11 -march=armv7e-m -c P256-Cortex-M4/p256-cortex-m4-asm-gcc.S -E > asm.s
+DEFMT_LOG=trace cargo test -p testsuite --target thumbv7em-none-eabi
 ```
 
 [Emill/P256-Cortex-M4]: https://github.com/Emill/P256-Cortex-M4
@@ -49,4 +39,4 @@ arm-none-eabi-gcc -O0 -ffunction-sections -fdata-sections -g -fno-omit-frame-poi
 [ycrypto/p256-cortex-m4]: https://github.com/ycrypto/p256-cortex-m4
 [ycrypto/p256-cortex-m4-sys]: https://github.com/ycrypto/p256-cortex-m4-sys
 [RustCrypto]: https://github.com/RustCrypto/elliptic-curves
-[probe-rs-tools]: https://probe.rs/docs/getting-started/installation/
+[qemu-system-arm]: https://www.qemu.org/docs/master/system/target-arm.html
