@@ -3,7 +3,7 @@
 
 use cortex_m::peripheral::DWT;
 use defmt::unwrap;
-use defmt_rtt as _; // global logger
+use defmt_semihosting as _; // global logger
 use hex_literal::hex;
 use panic_probe as _;
 

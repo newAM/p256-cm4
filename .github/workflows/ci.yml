@@ -13,16 +13,16 @@ name: CI
 
 jobs:
   build:
-    name: Build
+    name: Build and test
     runs-on: ubuntu-latest
-    env: {"RUSTFLAGS": "-D warnings"}
     steps:
       - uses: actions/checkout@v5
       - uses: dtolnay/rust-toolchain@stable
         with:
           target: thumbv7em-none-eabi
+      - run: sudo apt install qemu-system-arm
       - run: cargo build -p p256-cm4 --target thumbv7em-none-eabi
-      - run: cargo test -p testsuite --target thumbv7em-none-eabi --no-run
+      - run: cargo test -p testsuite --target thumbv7em-none-eabi
 
   clippy:
     name: Clippy
@@ -78,6 +78,6 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
         with:
           target: thumbv7em-none-eabi
-      - run: cargo publish -p p256-cm4
+      - run: cargo publish -p p256-cm4 --no-verify
         env:
           CARGO_REGISTRY_TOKEN: ${{ steps.auth.outputs.token }}

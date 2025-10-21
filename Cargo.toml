@@ -1,6 +1,6 @@
 [workspace]
 resolver = "2"
-members = ["p256-cm4", "testsuite"]
+members = ["p256-cm4", "testsuite", "qemu-decode"]
 default-members = ["p256-cm4"]
 
 [workspace.package]
