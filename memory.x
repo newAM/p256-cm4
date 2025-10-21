@@ -1,7 +1,6 @@
-/* Memory for the NUCLEO-WL55JC2 */
+/* Memory for the LM3S6965EVB */
 MEMORY
 {
-  /* See section 4.3.1 "Flash memory organization" in the reference manual */
-  FLASH : ORIGIN = 0x8000000, LENGTH = 256k
-  RAM : ORIGIN = 0x20000000, LENGTH = 64K
+  FLASH : ORIGIN = 0x00000000, LENGTH = 256k
+  RAM : ORIGIN = 0x20000000, LENGTH = 64k
 }

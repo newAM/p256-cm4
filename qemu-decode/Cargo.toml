@@ -1,0 +1,12 @@
+[package]
+name = "qemu-decode"
+publish = false
+version = "0.1.0"
+authors.workspace = true
+edition.workspace = true
+repository.workspace = true
+license.workspace = true
+
+[dependencies]
+anyhow = "1"
+defmt-decoder = "1"
