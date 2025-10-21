@@ -1,17 +1,26 @@
 #![no_std]
 #![no_main]
+#![cfg(test)]
 
 use cortex_m::peripheral::DWT;
 use defmt::unwrap;
 use defmt_semihosting as _; // global logger
 use hex_literal::hex;
-use panic_probe as _;
 
 const FREQ: u32 = 48_000_000;
 const CYC_PER_MICRO: u32 = FREQ / 1000 / 1000;
 
 // WARNING will wrap-around eventually, use this for relative timing only
 defmt::timestamp!("{=u32:us}", DWT::cycle_count() / CYC_PER_MICRO);
+
+#[panic_handler]
+fn panic_handler(info: &core::panic::PanicInfo) -> ! {
+    use cortex_m_semihosting::debug;
+
+    defmt::error!("{}", defmt::Display2Format(info));
+    debug::exit(debug::EXIT_FAILURE);
+    loop {}
+}
 
 // Message hash
 const HASH: [u32; 8] = [

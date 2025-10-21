@@ -14,9 +14,9 @@ harness = false
 
 [dependencies]
 cortex-m = { version = "0.7.7", features = [ "critical-section-single-core" ] }
+cortex-m-semihosting = "0.5.0"
 defmt = "1.0"
 defmt-semihosting = "0.3"
 defmt-test = "0.4"
 hex-literal = "1.0.0"
 p256-cm4.path = "../p256-cm4"
-panic-probe = { version = "1.0", features = ["print-defmt" ] }
