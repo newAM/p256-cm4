@@ -4,8 +4,13 @@
 
 use cortex_m::peripheral::DWT;
 use defmt::unwrap;
-use defmt_semihosting as _; // global logger
 use hex_literal::hex;
+
+#[cfg(not(feature = "rtt"))]
+use defmt_semihosting as _;
+
+#[cfg(feature = "rtt")]
+use defmt_rtt as _;
 
 const FREQ: u32 = 48_000_000;
 const CYC_PER_MICRO: u32 = FREQ / 1000 / 1000;

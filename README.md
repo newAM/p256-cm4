@@ -34,6 +34,46 @@ Install [qemu-system-arm] (tested to work with `qemu-system-arm 8.2.2`).
 DEFMT_LOG=trace cargo test -p testsuite --target thumbv7em-none-eabi
 ```
 
+### Testing on real hardware
+
+1. Install a debugger (we recommend [probe-rs-tools])
+2. Update `memory.x` to match your target device
+3. Update the runner in `.cargo/config.toml`
+4. Run the command from the [Testing](#testing) section.
+
+Usually, you'll want rtt logs instead of semihosting logs when running on real hardware. To get those, you can enable the `rtt` feature.
+
+An example change, when running on an `STM32H723ZGTx`:
+
+`.cargo/config.toml`:
+```diff
+[target.thumbv7em-none-eabi]
+-runner = "cargo run -p qemu-decode --"
++runner = "probe-rs run --chip STM32H723ZGTx"
+```
+
+`memory.x`:
+```diff
+-/* Memory for the LM3S6965EVB */
++/* Memory for STM32H723ZGTx (running from RAM) */
+MEMORY
+{
+-  FLASH : ORIGIN = 0x00000000, LENGTH = 256k
+-  RAM : ORIGIN = 0x20000000, LENGTH = 64k
++  DTCM    : ORIGIN = 0x20000000, LENGTH = 128K
++  AXISRAM : ORIGIN = 0x24000000, LENGTH = 128K + 192K
+}
++# Region alias to run from RAM
++REGION_ALIAS(FLASH, AXISRAM);
++REGION_ALIAS(RAM,   DTCM);
+```
+
+Command:
+```bash
+DEFMT_LOG=trace cargo test -p testsuite --target thumbv7em-none-eabi --features rtt
+```
+
+[probe-rs-tools]: https://probe.rs/docs/getting-started/installation/
 [Emill/P256-Cortex-M4]: https://github.com/Emill/P256-Cortex-M4
 [naked_asm]: https://doc.rust-lang.org/core/arch/macro.naked_asm.html
 [ycrypto/p256-cortex-m4]: https://github.com/ycrypto/p256-cortex-m4
