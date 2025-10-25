@@ -2,7 +2,7 @@
 
 [![CI](https://github.com/newAM/p256-cm4/workflows/CI/badge.svg)](https://github.com/newAM/p256-cm4/actions)
 [![crates.io](https://img.shields.io/crates/v/p256-cm4.svg)](https://crates.io/crates/p256-cm4)
-[![docs](https://docs.rs/p256-cm4/badge.svg)](https://docs.rs/p256-cm4) 
+[![docs](https://docs.rs/p256-cm4/badge.svg)](https://docs.rs/p256-cm4)
 
 A (mostly) rust re-implementation of [Emill/P256-Cortex-M4].
 
@@ -28,25 +28,55 @@ As measured on a STM32WLE5.
 
 ### Testing
 
-Install [probe-rs-tools].
-
-Adjust `.cargo/config.toml`, `memory.x`, `testsuite/Cargo.toml`, and the clock setup for your target.
+Install [qemu-system-arm] (tested to work with `qemu-system-arm 8.2.2`).
 
 ```bash
-DEFMT_LOG=trace cargo test -p testsuite
+DEFMT_LOG=trace cargo test -p testsuite --target thumbv7em-none-eabi
 ```
 
-### ASM Generation
+### Testing on real hardware
 
-Send the GCC ASM from [Emill/P256-Cortex-M4] through the pre-processor.
+1. Install a debugger (we recommend [probe-rs-tools])
+2. Update `memory.x` to match your target device
+3. Update the runner in `.cargo/config.toml`
+4. Run the command from the [Testing](#testing) section.
 
+Usually, you'll want rtt logs instead of semihosting logs when running on real hardware. To get those, you can enable the `rtt` feature.
+
+An example change, when running on an `STM32H723ZGTx`:
+
+`.cargo/config.toml`:
+```diff
+[target.thumbv7em-none-eabi]
+-runner = "cargo run -p qemu-decode --"
++runner = "probe-rs run --chip STM32H723ZGTx"
+```
+
+`memory.x`:
+```diff
+-/* Memory for the LM3S6965EVB */
++/* Memory for STM32H723ZGTx (running from RAM) */
+MEMORY
+{
+-  FLASH : ORIGIN = 0x00000000, LENGTH = 256k
+-  RAM : ORIGIN = 0x20000000, LENGTH = 64k
++  DTCM    : ORIGIN = 0x20000000, LENGTH = 128K
++  AXISRAM : ORIGIN = 0x24000000, LENGTH = 128K + 192K
+}
++# Region alias to run from RAM
++REGION_ALIAS(FLASH, AXISRAM);
++REGION_ALIAS(RAM,   DTCM);
+```
+
+Command:
 ```bash
-arm-none-eabi-gcc -O0 -ffunction-sections -fdata-sections -g -fno-omit-frame-pointer -mthumb -march=armv7e-m -Wall -Wextra -std=c11 -march=armv7e-m -c P256-Cortex-M4/p256-cortex-m4-asm-gcc.S -E > asm.s
+DEFMT_LOG=trace cargo test -p testsuite --target thumbv7em-none-eabi --features rtt
 ```
 
+[probe-rs-tools]: https://probe.rs/docs/getting-started/installation/
 [Emill/P256-Cortex-M4]: https://github.com/Emill/P256-Cortex-M4
 [naked_asm]: https://doc.rust-lang.org/core/arch/macro.naked_asm.html
 [ycrypto/p256-cortex-m4]: https://github.com/ycrypto/p256-cortex-m4
 [ycrypto/p256-cortex-m4-sys]: https://github.com/ycrypto/p256-cortex-m4-sys
 [RustCrypto]: https://github.com/RustCrypto/elliptic-curves
-[probe-rs-tools]: https://probe.rs/docs/getting-started/installation/
+[qemu-system-arm]: https://www.qemu.org/docs/master/system/target-arm.html
