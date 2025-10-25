@@ -26,6 +26,22 @@ As measured on a STM32WLE5.
 
 ## Maintainers Notes
 
+### Using VSCode with `rust-analyzer` in a multi-target workspace
+
+Since `qemu-decode` requires `std`, compiling it for `thumbv7em-none-eabi` spits out a lot of errors which massively slows down `rust-analyzer` if you
+try to change the compilation target for `p256-cm4` and `testsuite`.
+
+By default, VSCode configures `rust-analyzer` to run `cargo` on the entire workspace. However, to prevent `rust-analyzer` from trying to compile packages
+for targets they are not intended to compile for, you can open an individual project (e.g. `code p256-cm4/` or `code testsuite/`) and set
+the following settings in your `.vscode/config.json`:
+
+```json
+{
+    "rust-analyzer.check.workspace": false,
+    "rust-analyzer.cargo.target": "thumbv7em-none-eabi"
+}
+```
+
 ### Testing
 
 Install [probe-rs-tools].
