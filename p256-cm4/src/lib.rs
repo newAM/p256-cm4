@@ -514,11 +514,11 @@ pub fn sign(
 /// A result state MUST NOT be reused for generating multiple signatures.
 #[must_use]
 pub fn sign_step1(result: &mut SignPrecomp, k: &[u32; 8]) -> bool {
-    #[allow(clippy::never_loop)]
-    loop {
+    'check: {
         if !check_range_n(k) {
-            break;
+            break 'check;
         }
+
         let mut output_x = Montgomery::zero();
         let mut output_y = Montgomery::zero();
 
@@ -529,9 +529,11 @@ pub fn sign_step1(result: &mut SignPrecomp, k: &[u32; 8]) -> bool {
         reduce_mod_n_32bytes_in_place(&mut result.r);
 
         let r_sum: u32 = (0..8).fold(0, |r_sum, i| r_sum | result.r[i]);
+
         if r_sum == 0 {
-            break;
+            break 'check;
         }
+
         return true;
     }
 
@@ -571,11 +573,10 @@ pub fn sign_step2(
     private_key: &[u32; 8],
     sign_precomp: &mut SignPrecomp,
 ) -> bool {
-    #[allow(clippy::never_loop)]
-    loop {
+    'check: {
         // just make sure user did not input an obviously invalid precomp
         if !check_range_n(&sign_precomp.k_inv) || !check_range_n(&sign_precomp.r) {
-            break;
+            break 'check;
         }
         hash_to_z(u32x8_to_u8x32_mut(r), hash);
         mul_mod_n(s, &sign_precomp.r, private_key);
@@ -586,7 +587,7 @@ pub fn sign_step2(
 
         let s_sum: u32 = s.iter().fold(0, |s_sum, s| s_sum | s);
         if s_sum == 0 {
-            break;
+            break 'check;
         }
         sign_precomp.r.fill(0);
         sign_precomp.k_inv.fill(0);
