@@ -2,7 +2,7 @@ use anyhow::Context as _;
 use defmt_decoder::DecodeError;
 use std::{
     io::Read as _,
-    process::{self, Child, ChildStdout, Command, Stdio},
+    process::{Child, Command},
 };
 
 fn main() -> anyhow::Result<()> {
@@ -30,34 +30,37 @@ fn main() -> anyhow::Result<()> {
         "-kernel",
     ];
 
+    let (mut reader, writer) = std::io::pipe().unwrap();
+
     let mut qemu: Child = Command::new("qemu-system-arm")
         .args(QEMU_ARGS)
         .arg(elf_path)
-        .stdout(Stdio::piped())
+        .stdout(writer)
         .spawn()
         .context("Failed to spawn QEMU process")?;
 
-    let mut stdout: ChildStdout = qemu.stdout.take().context("Failed to take QEMU stdout")?;
-
     let mut decoder = table.new_stream_decoder();
+    let mut buffer = [0u8; 1024];
 
-    let mut endbuf: Vec<u8> = Default::default();
-    stdout.read_to_end(&mut endbuf)?;
-    decoder.received(&endbuf);
     loop {
-        match decoder.decode() {
-            Ok(frame) => println!("{}", frame.display(false)),
-            Err(DecodeError::UnexpectedEof) => break,
-            Err(e) => Err(e).context("Error decoding defmt data")?,
+        match qemu.try_wait().context("Failed to wait for QEMU")? {
+            Some(status) => {
+                if let Some(code) = status.code() {
+                    std::process::exit(code);
+                } else {
+                    return Ok(());
+                }
+            }
+            None => {
+                let len = reader.read(&mut buffer)?;
+                decoder.received(&buffer[..len]);
+
+                match decoder.decode() {
+                    Ok(frame) => println!("{}", frame.display(false)),
+                    Err(DecodeError::UnexpectedEof) => continue,
+                    Err(e) => Err(e).context("Error decoding defmt data")?,
+                }
+            }
         }
     }
-    qemu.try_wait().context("Failed to wait for QEMU")?;
-
-    if let Some(exit_status) = qemu.try_wait().context("Failed to wait for QEMU")?
-        && let Some(exit_code) = exit_status.code()
-    {
-        process::exit(exit_code);
-    }
-
-    Ok(())
 }
