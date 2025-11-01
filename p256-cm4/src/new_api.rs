@@ -1,4 +1,7 @@
-use crate::{Montgomery, check_range_n, check_range_p, sys, verify_no_bounds_checks};
+use crate::{
+    Montgomery, SignPrecomp, check_range_n, check_range_p, sign_step1, sign_step2, sys,
+    verify_no_bounds_checks,
+};
 
 #[cfg_attr(feature = "defmt", derive(defmt::Format))]
 #[derive(Debug, Clone, PartialEq)]
@@ -192,6 +195,64 @@ impl Signature {
         }
 
         Some(Self { r, s })
+    }
+}
+
+/// A signing key, also called a private key.
+pub struct SigningKey {
+    key_data: [u32; 8],
+}
+
+impl SigningKey {
+    /// Create a new signing key from the provided key data.
+    ///
+    /// This function will return `None` if `key` is not in the range `1..=n-1` (where `n` is the
+    /// `p256` order) when interpreted as a big-endian integer.
+    pub fn new(key: &[u8; 32]) -> Option<Self> {
+        let key_data = to_little_endian(key);
+
+        check_range_n(&key_data).then_some(Self { key_data })
+    }
+
+    /// Sign the provided cryptographic hash `hash` using the securely randomly generated
+    /// nonce `k`.
+    ///
+    /// This function returns `None` for some combinations of `self` and `k`.
+    /// When it does, you must generate a new, securely randomly generated nonce
+    /// `k` and call this function again.
+    pub fn sign_with_k(&self, hash: &[u8; 32], k: &[u8; 32]) -> Option<Signature> {
+        let mut r = Default::default();
+        let mut s = Default::default();
+        let mut precomp = SignPrecomp::default();
+        let k = to_little_endian(k);
+
+        (sign_step1(&mut precomp, &k)
+            && sign_step2(&mut r, &mut s, hash, &self.key_data, &mut precomp))
+        .then_some(Signature { r, s })
+    }
+
+    /// Sign the provided cryptographic hash `hash`.
+    ///
+    /// This function uses the implementation defined in `RFC6979` to
+    /// produce a valid nonce for the signature, and is therefore somewhat
+    /// slower than [`Self::sign_with`].
+    #[cfg(feature = "rfc6979")]
+    pub fn sign(&self, hash: &[u8; 32]) -> Signature {
+        use sha2::Sha256;
+
+        let mut le_key_data = Default::default();
+        to_big_endian(&self.key_data, &mut le_key_data);
+
+        let mut hmac = rfc6979::HmacDrbg::<Sha256>::new(&le_key_data, hash, &[]);
+        let mut k = [0u8; 32];
+        hmac.fill_bytes(&mut k);
+
+        loop {
+            if let Some(signature) = self.sign_with_k(hash, &k) {
+                return signature;
+            }
+            hmac.fill_bytes(&mut k);
+        }
     }
 }
 

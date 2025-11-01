@@ -45,6 +45,14 @@ const CURVE_PT_Y: [u8; 32] = *u32x8_to_u8x32(&[
     0xc61440ce, 0xa2f91188, 0x2cdb1f1a, 0xe013610e, 0x93cab76d, 0x784e40b7, 0x5ccd7cdc, 0xa94c9aa8,
 ]);
 
+const PRIVATE_KEY: [u8; 32] = *u32x8_to_u8x32(&[
+    0x3d429b51, 0x588b5f71, 0xeea84f1f, 0x1a77f459, 0x13c8445b, 0xac3e4e0b, 0x6da554ca, 0x64b472da,
+]);
+
+const INTEGER: [u8; 32] = *u32x8_to_u8x32(&[
+    0xb1bba194, 0x616a904b, 0x45f280a2, 0x7f3ce9f9, 0x47624a3b, 0x335d4f82, 0x870767b9, 0xde682a64,
+]);
+
 const fn u32x8_to_u8x32(input: &[u32; 8]) -> &[u8; 32] {
     unsafe { core::mem::transmute::<&[u32; 8], &[u8; 32]>(input) }
 }
@@ -52,7 +60,7 @@ const fn u32x8_to_u8x32(input: &[u32; 8]) -> &[u8; 32] {
 #[defmt_test::tests]
 mod tests {
     use super::*;
-    use p256_cm4::{Signature, VerifyingKey, VerifyingKeyError};
+    use p256_cm4::{Signature, SigningKey, VerifyingKey, VerifyingKeyError};
 
     #[init]
     fn init() {
@@ -126,7 +134,38 @@ mod tests {
     }
 
     #[test]
-    fn verify() {
+    fn sign_and_verify() {
+        let start: u32 = DWT::cycle_count();
+
+        let signing_key = SigningKey::new(&PRIVATE_KEY).unwrap();
+        let verifying_key = VerifyingKey::from_parts(&CURVE_PT_X, &CURVE_PT_Y).unwrap();
+
+        let signature = signing_key.sign(&HASH);
+        let elapsed: u32 = DWT::cycle_count().wrapping_sub(start);
+        defmt::debug!("Approximate cycles per p256 sign: {}", elapsed);
+
+        defmt::assert!(verifying_key.verify_prehash(&HASH, &signature));
+    }
+
+    #[test]
+    fn sign_with_k_and_verify() {
+        let start: u32 = DWT::cycle_count();
+
+        let signing_key = SigningKey::new(&PRIVATE_KEY).unwrap();
+        let verifying_key = VerifyingKey::from_parts(&CURVE_PT_X, &CURVE_PT_Y).unwrap();
+
+        let signature = signing_key.sign_with_k(&HASH, &INTEGER).unwrap();
+        let elapsed: u32 = DWT::cycle_count().wrapping_sub(start);
+        defmt::debug!(
+            "Approximate cycles per p256 sign (with pre-provided K): {}",
+            elapsed
+        );
+
+        defmt::assert!(verifying_key.verify_prehash(&HASH, &signature));
+    }
+
+    #[test]
+    fn verify_provided_signature() {
         let start: u32 = DWT::cycle_count();
 
         let key = VerifyingKey::from_parts(&CURVE_PT_X, &CURVE_PT_Y).unwrap();
