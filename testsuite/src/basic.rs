@@ -57,10 +57,6 @@ const CURVE_PT_Y: [u32; 8] = [
     0xc61440ce, 0xa2f91188, 0x2cdb1f1a, 0xe013610e, 0x93cab76d, 0x784e40b7, 0x5ccd7cdc, 0xa94c9aa8,
 ];
 
-fn into_bytes(i: [u32; 8]) -> [u8; 32] {
-    unsafe { core::mem::transmute::<[u32; 8], [u8; 32]>(i) }
-}
-
 fn u32x8_to_u8x32(input: &[u32; 8]) -> &[u8; 32] {
     unsafe { core::mem::transmute::<&[u32; 8], &[u8; 32]>(input) }
 }
@@ -257,11 +253,10 @@ mod tests {
     fn test_verify() {
         use p256_cm4::{convert_endianness, octet_string_to_point, verify};
 
-        let start: u32 = DWT::cycle_count();
         let mut key: [u8; 65] = [0; 65];
         key[0] = 0x04;
-        key[1..33].copy_from_slice(&into_bytes(CURVE_PT_X));
-        key[33..65].copy_from_slice(&into_bytes(CURVE_PT_Y));
+        key[1..33].copy_from_slice(u32x8_to_u8x32(&CURVE_PT_X));
+        key[33..65].copy_from_slice(u32x8_to_u8x32(&CURVE_PT_Y));
 
         let mut x: [u32; 8] = [0; 8];
         let mut y: [u32; 8] = [0; 8];
@@ -269,19 +264,17 @@ mod tests {
         let is_ok: bool = octet_string_to_point(&mut x, &mut y, &key);
         assert!(is_ok, "p256_octet_string_to_point");
 
+        let hash = u32x8_to_u8x32(&HASH);
+
+        let start: u32 = DWT::cycle_count();
+
         let mut r: [u32; 8] = [0; 8];
         let mut s: [u32; 8] = [0; 8];
 
         convert_endianness(u32x8_to_u8x32_mut(&mut r), u32x8_to_u8x32(&R_SIGN));
         convert_endianness(u32x8_to_u8x32_mut(&mut s), u32x8_to_u8x32(&S_SIGN));
 
-        let authentic: bool = verify(
-            &x,
-            &y,
-            unsafe { core::mem::transmute::<&[u32; 8], &[u8; 32]>(&HASH) },
-            &r,
-            &s,
-        );
+        let authentic: bool = verify(&x, &y, hash, &r, &s);
 
         let elapsed: u32 = DWT::cycle_count().wrapping_sub(start);
 
@@ -372,14 +365,14 @@ mod tests {
 
         convert_endianness(
             u32x8_to_u8x32_mut(&mut private_key),
-            &into_bytes(PRIVATE_KEY),
+            u32x8_to_u8x32(&PRIVATE_KEY),
         );
 
         defmt::assert!(check_range_n(&private_key));
 
         let mut integer: [u32; 8] = [0; 8];
 
-        convert_endianness(u32x8_to_u8x32_mut(&mut integer), &into_bytes(INTEGER));
+        convert_endianness(u32x8_to_u8x32_mut(&mut integer), u32x8_to_u8x32(&INTEGER));
 
         let mut r_sign: [u32; 8] = [0; 8];
         let mut s_sign: [u32; 8] = [0; 8];

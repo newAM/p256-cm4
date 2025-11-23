@@ -12,6 +12,11 @@ name = "basic"
 path = "src/basic.rs"
 harness = false
 
+[[bin]]
+name = "new_api"
+path = "src/new_api.rs"
+harness = false
+
 [dependencies]
 cortex-m = { version = "0.7.7", features = [ "critical-section-single-core" ] }
 cortex-m-semihosting = "0.5.0"
@@ -20,7 +25,7 @@ defmt-rtt = { version = "1.1.0", optional = true }
 defmt-semihosting = "0.3"
 defmt-test = "0.4"
 hex-literal = "1.0.0"
-p256-cm4.path = "../p256-cm4"
+p256-cm4 = { path = "../p256-cm4", features = [ "defmt", "p256", "rfc6979" ] }
 
 [features]
 # Use RTT instead of semihosting for logs

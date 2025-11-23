@@ -1,7 +1,16 @@
 #![no_std]
 #![allow(clippy::missing_safety_doc)]
 
+mod new_api;
 mod sys;
+
+#[cfg(feature = "p256")]
+mod p256;
+
+#[cfg(feature = "signature")]
+mod signature;
+
+pub use new_api::*;
 
 use sys::{
     Montgomery, add_mod_n_in_place, add_sub_j, add_sub_j_affine, decompress_point, divsteps2_31,
@@ -10,6 +19,8 @@ use sys::{
     reduce_mod_n_32bytes_in_place, verify_last_step,
 };
 pub use sys::{check_range_n, check_range_p};
+
+use crate::sys::{FGInteger, XYInteger};
 
 // This table contains 1G, 3G, 5G, ... 15G in affine coordinates in montgomery form
 #[rustfmt::skip]
@@ -660,6 +671,16 @@ pub fn verify(
         return false;
     }
 
+    verify_no_bounds_checks(public_key_x, public_key_y, hash, r, s)
+}
+
+pub(crate) fn verify_no_bounds_checks(
+    public_key_x: &[u32; 8],
+    public_key_y: &[u32; 8],
+    hash: &[u8],
+    r: &[u32; 8],
+    s: &[u32; 8],
+) -> bool {
     let mut pk_table = [[Montgomery::zero(); 3]; 8];
     pk_table[0][0].read(public_key_x);
     pk_table[0][1].read(public_key_y);
@@ -732,27 +753,6 @@ pub fn verify(
         });
 
     verify_last_step(r, &cp)
-}
-
-#[repr(C)]
-#[derive(Default)]
-struct FGInteger {
-    // To get the value this struct represents,
-    // interpret signed_value as a two's complement 288-bit little endian integer,
-    // and negate if flip_sign is -1
-    flip_sign: i32, // 0 or -1
-    // of 288 bits, 257 are useful (top 31 bits are sign-extended from bit 256)
-    signed_value: [u32; 9],
-}
-
-#[repr(C)]
-#[derive(Default)]
-struct XYInteger {
-    // To get the value this struct represents,
-    // interpret signed_value as an unsigned 288-bit little endian integer,
-    // and negate if flip_sign is -1
-    flip_sign: i32,  // 0 or -1
-    value: [u32; 8], // unsigned value, 0 <= value < P256_order
 }
 
 #[repr(C)]
