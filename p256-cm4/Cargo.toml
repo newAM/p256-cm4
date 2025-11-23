@@ -11,7 +11,7 @@ categories = ["embedded", "no-std", "cryptography"]
 keywords = ["no-std", "nist", "cryptography", "signatures", "cortex-m"]
 
 [package.metadata.docs.rs]
-targets = ["thumbv7em-none-eabi"]
+targets = ["thumbv7em-none-eabihf"]
 all-features = true
 rustdoc-args = ["--cfg", "docsrs"]
 
