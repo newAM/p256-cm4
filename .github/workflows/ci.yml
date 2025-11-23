@@ -20,6 +20,7 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
         with:
           target: thumbv7em-none-eabi
+      - run: sudo apt update
       - run: sudo apt install qemu-system-arm
       - run: cargo build -p p256-cm4 --target thumbv7em-none-eabi
       - run: cargo test -p testsuite --target thumbv7em-none-eabi
