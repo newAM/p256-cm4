@@ -14,8 +14,8 @@ use core::arch::naked_asm;
 #[unsafe(no_mangle)]
 #[unsafe(naked)]
 pub unsafe extern "C" fn P256_mulmod() {
-    cfg_if::cfg_if! {
-        if #[cfg(feature = "fpu")] {
+    cfg_select! {
+        feature = "fpu" => {
             naked_asm!(
                 "
                     push {lr}
@@ -258,7 +258,8 @@ pub unsafe extern "C" fn P256_mulmod() {
                 ",
                 options(raw)
             )
-        } else {
+        }
+        _ => {
             naked_asm!(
                 "
                     push {r2, lr}

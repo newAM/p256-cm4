@@ -12,8 +12,8 @@ use core::arch::naked_asm;
 #[unsafe(no_mangle)]
 #[unsafe(naked)]
 pub unsafe extern "C" fn P256_sqrmod() {
-    cfg_if::cfg_if! {
-        if #[cfg(feature = "use-mul-for-sqr")] {
+    cfg_select! {
+        feature = "use-mul-for-sqr" => {
             naked_asm!(
                 "
                     push {{r0-r7,lr}}
@@ -28,7 +28,8 @@ pub unsafe extern "C" fn P256_sqrmod() {
                 ",
                 P256_mulmod = sym super::P256_mulmod,
             )
-        } else if #[cfg(feature = "fpu")] {
+        }
+        feature = "fpu" => {
             naked_asm!(
                 "
                     push {lr}
@@ -310,7 +311,8 @@ pub unsafe extern "C" fn P256_sqrmod() {
                 ",
                 options(raw)
             )
-        } else {
+        }
+        _ => {
             naked_asm!(
                 "
                     push {lr}
