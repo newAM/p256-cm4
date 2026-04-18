@@ -19,5 +19,4 @@ rustdoc-args = ["--cfg", "docsrs"]
 use-mul-for-sqr = [ ]
 fpu = [ ]
 
-[dependencies]
-cfg-if = { version = "1.0.3", default-features = false }
+
